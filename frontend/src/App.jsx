@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import Achievement from './components/Achievement.jsx'
 import Dashboard from './components/Dashboard.jsx'
+import EditProfile from './components/EditProfile.jsx'
 import Learn from './components/Learn.jsx'
 import Login from './components/Login.jsx'
 import Profile from './components/Profile.jsx'
@@ -17,6 +18,7 @@ function App() {
       <Route path="/achievement" element={<Achievement />} />
       <Route path="/quiz" element={<Quiz />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/edit" element={<EditProfile />} />
     </Routes>
   )
 }

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import Layout from './Layout.jsx'
 
 function Profile() {
@@ -39,7 +40,7 @@ function Profile() {
               <img
                 alt="Profile picture of Chester"
                 className="w-full h-full rounded-full object-cover border-4 border-primary"
-                src="https://media.licdn.com/dms/image/v2/D5603AQHwl7Lc9OOtvg/profile-displayphoto-shrink_800_800/B56ZdSfT8KGQAc-/0/1749435629716?e=1767830400&v=beta&t=sHtQIMUjngQdTOk6LaRf_BVxKPFJBhu3XyR5JufelO0"
+                src="https://lh3.googleusercontent.com/a/ACg8ocLyRHQvwCqfDkEB8QjBR1lbWwKLf6LC773bpIZzMD1HvKM4yFTy=s432-c-"
               />
             </div>
             <div className="absolute bottom-0 right-0 bg-yellow-400 text-black font-bold text-xs px-2 py-1 rounded-full border-2 border-[#0b5cb5]">
@@ -74,12 +75,15 @@ function Profile() {
               </p>
             </div>
             <div className="flex gap-3">
-              <button className="flex items-center gap-2 px-5 py-2 bg-white text-primary rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors shadow-sm">
+              <Link
+                className="flex items-center gap-2 px-5 py-2 bg-white text-primary rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors shadow-sm"
+                to="/profile/edit"
+              >
                 <span className="material-symbols-outlined text-[20px]">
                   edit
                 </span>
                 Edit Profile
-              </button>
+              </Link>
               <button className="flex items-center gap-2 px-5 py-2 bg-black/20 text-white rounded-lg font-bold text-sm hover:bg-black/30 transition-colors backdrop-blur-md border border-white/10">
                 <span className="material-symbols-outlined text-[20px]">
                   share
