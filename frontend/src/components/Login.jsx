@@ -73,10 +73,10 @@ function Login() {
               <div className="flex items-center gap-3">
                 <div
                   className="size-9 rounded-full bg-white/20 overflow-hidden bg-cover bg-center"
-                  data-alt="Portrait of a female computer science student smiling"
+                  data-alt="Portrait of associate professor from INTI International University"
                   style={{
                     backgroundImage:
-                      "url('https://media.licdn.com/dms/image/v2/D5603AQHpDqEC--S3QA/profile-displayphoto-crop_800_800/B56ZpMXdOiI4AI-/0/1762217814120?e=1767830400&v=beta&t=tvV6ik0pWvO-sm4u39fdz40ShW81VAg3sabiJIZ1yxQ')",
+                      "url('https://media.licdn.com/dms/image/v2/D5603AQHpDqEC--S3QA/profile-displayphoto-crop_800_800/B56ZpMXdOiI4AI-/0/1762217814120?e=1770854400&v=beta&t=1O6lDyYj-yvG-bDaGR0-dO6hmE9mh9pt1coHdT3XkYY')",
                   }}
                 ></div>
                 <div>

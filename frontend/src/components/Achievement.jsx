@@ -1,6 +1,11 @@
+import { useState } from 'react'
 import Layout from './Layout.jsx'
+import ProfileShareModal from './ProfileShareModal.jsx'
 
 function Achievement() {
+  const [isShareOpen, setIsShareOpen] = useState(false)
+  const profileShareLink = 'sample.com/u/chester'
+
   return (
     <Layout title="Achievements">
       <style>{`
@@ -55,7 +60,11 @@ function Achievement() {
                 Level 14 • Python Practitioner
               </p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-[#323b46] transition text-sm font-medium dark:text-white shadow-sm">
+            <button
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-[#323b46] transition text-sm font-medium dark:text-white shadow-sm"
+              onClick={() => setIsShareOpen(true)}
+              type="button"
+            >
               <span className="material-symbols-outlined text-lg">share</span>
               Share Profile
             </button>
@@ -363,6 +372,11 @@ function Achievement() {
           </p>
         </div>
       </div>
+      <ProfileShareModal
+        isOpen={isShareOpen}
+        link={profileShareLink}
+        onClose={() => setIsShareOpen(false)}
+      />
     </Layout>
   )
 }
