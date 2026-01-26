@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Achievement Page - Student Journey</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;family=Noto+Sans:wght@300..800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-dark": "#1c252e",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+
+        .achievement-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .achievement-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(19, 127, 236, 0.3), 0 8px 10px -6px rgba(19, 127, 236, 0.1);
+            border-color: #137fec;
+        }
+
+        @keyframes ocean-flow {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .ocean-gradient-anim {
+            background: linear-gradient(270deg, #38bdf8, #3b82f6, #2dd4bf);
+            background-size: 200% 200%;
+            animation: ocean-flow 3s ease infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div class="flex h-screen w-full relative">
+        <aside
+            class="hidden md:flex flex-col w-72 bg-surface-light dark:bg-[#111418] border-r border-slate-200 dark:border-slate-800 h-full flex-shrink-0 z-20">
+            <div class="flex flex-col h-full p-4 justify-between">
+                <div class="flex flex-col gap-8">
+                    <div class="flex gap-3 items-center px-2">
+                        <div class="bg-center bg-no-repeat bg-cover rounded-full size-12 shadow-lg ring-2 ring-primary/20"
+                            data-alt="Profile picture of a student smiling"
+                            style='background-image: url("https://lh3.googleusercontent.com/a/ACg8ocLyRHQvwCqfDkEB8QjBR1lbWwKLf6LC773bpIZzMD1HvKM4yFTy=s432-c-no");'>
+                        </div>
+                        <div class="flex flex-col">
+                            <h1 class="text-slate-900 dark:text-white text-base font-semibold leading-tight"> Chester
+                            </h1>
+                            <p class="text-slate-500 dark:text-[#9dabb9] text-xs font-medium uppercase tracking-wider">
+                                Level 99</p>
+                        </div>
+                    </div>
+                    <nav class="flex flex-col gap-2">
+                        <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1c232b] text-slate-600 dark:text-[#9dabb9] group transition-colors"
+                            href="#">
+                            <span
+                                class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">dashboard</span>
+                            <span class="text-sm font-medium">Dashboard</span>
+                        </a>
+                        <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1c232b] text-slate-600 dark:text-[#9dabb9] group transition-colors"
+                            href="#">
+                            <span
+                                class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">map</span>
+                            <span class="text-sm font-medium">Learning Path</span>
+                        </a>
+                        <a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 dark:bg-[#283039] text-primary dark:text-white border-l-4 border-primary"
+                            href="#">
+                            <span class="material-symbols-outlined text-2xl"
+                                style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+                            <span class="text-sm font-medium">Achievements</span>
+                        </a>
+                        <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1c232b] text-slate-600 dark:text-[#9dabb9] group transition-colors"
+                            href="#">
+                            <span
+                                class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">quiz</span>
+                            <span class="text-sm font-medium">Quiz</span>
+                        </a>
+                        <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1c232b] text-slate-600 dark:text-[#9dabb9] group transition-colors"
+                            href="#">
+                            <span
+                                class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">person</span>
+                            <span class="text-sm font-medium">Profile</span>
+                        </a>
+                    </nav>
+                </div>
+                <div class="px-2">
+                    <div
+                        class="p-4 rounded-2xl bg-gradient-to-br from-indigo-900 to-slate-900 border border-indigo-500/30 relative overflow-hidden group cursor-pointer">
+                        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <span class="material-symbols-outlined text-6xl text-white">rocket_launch</span>
+                        </div>
+                        <p class="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">Daily Streak</p>
+                        <p class="text-white text-2xl font-bold">12 Days</p>
+                        <p class="text-indigo-200/60 text-xs mt-2">Keep it up to earn the Fire badge!</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <main class="flex-1 flex flex-col h-full overflow-y-auto bg-background-light dark:bg-background-dark relative">
+            <div
+                class="flex items-center justify-between p-4 md:hidden bg-surface-light dark:bg-[#111418] border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
+                <span class="material-symbols-outlined dark:text-white">menu</span>
+                <span class="text-lg font-bold dark:text-white">Achievements</span>
+                <div class="size-8 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+            </div>
+            <div class="max-w-7xl mx-auto w-full p-4 md:p-8 lg:p-12 flex flex-col gap-8 pb-20">
+                <header class="flex flex-col gap-6">
+                    <div class="flex flex-wrap justify-between items-end gap-4">
+                        <div>
+                            <h1
+                                class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+                                Trophy Collection</h1>
+                            <p class="text-slate-500 dark:text-[#9dabb9] text-lg font-normal">Level 14 • Python
+                                Practitioner</p>
+                        </div>
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-[#323b46] transition text-sm font-medium dark:text-white shadow-sm">
+                            <span class="material-symbols-outlined text-lg">share</span>
+                            Share Profile
+                        </button>
+                    </div>
+                    <div
+                        class="bg-surface-light dark:bg-[#1c252e] p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                        <div
+                            class="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none">
+                        </div>
+                        <div class="flex flex-col gap-3 relative z-10">
+                            <div class="flex gap-6 justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary">flag</span>
+                                    <p class="text-slate-900 dark:text-white text-base font-semibold">Your Journey So
+                                        Far</p>
+                                </div>
+                                <span class="text-primary font-bold text-lg">65%</span>
+                            </div>
+                            <div class="h-4 w-full bg-slate-100 dark:bg-[#3b4754] rounded-full overflow-hidden">
+                                <div class="h-full ocean-gradient-anim relative rounded-full shadow-[0_0_15px_rgba(56,189,248,0.5)]"
+                                    style="width: 65%;">
+                                    <div class="absolute inset-0 bg-white/10 w-full h-full animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <p class="text-slate-500 dark:text-[#9dabb9] text-sm">Next Reward: <span
+                                        class="text-primary font-medium">Advanced Algorithms Module</span></p>
+                                <p class="text-slate-400 dark:text-slate-600 text-xs">1,250 XP to Level 15</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div
+                            class="flex flex-col gap-1 rounded-xl p-5 bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700/50 shadow-sm">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="material-symbols-outlined text-amber-500">bolt</span>
+                                <p
+                                    class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">
+                                    Total XP</p>
+                            </div>
+                            <p class="text-slate-900 dark:text-white text-3xl font-bold tracking-tight">14,500</p>
+                        </div>
+                        <div
+                            class="flex flex-col gap-1 rounded-xl p-5 bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700/50 shadow-sm">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="material-symbols-outlined text-indigo-400">military_tech</span>
+                                <p
+                                    class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">
+                                    Badges</p>
+                            </div>
+                            <p class="text-slate-900 dark:text-white text-3xl font-bold tracking-tight">24 <span
+                                    class="text-lg text-slate-400 font-normal">/ 100</span></p>
+                        </div>
+                        <div
+                            class="flex flex-col gap-1 rounded-xl p-5 bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700/50 shadow-sm relative overflow-hidden">
+                            <div class="absolute -right-4 -bottom-4 opacity-10 rotate-12">
+                                <span class="material-symbols-outlined text-8xl text-purple-500">diamond</span>
+                            </div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="material-symbols-outlined text-purple-400">diamond</span>
+                                <p
+                                    class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wide">
+                                    Rarest</p>
+                            </div>
+                            <p class="text-slate-900 dark:text-white text-xl md:text-2xl font-bold tracking-tight truncate"
+                                title="Graph Theory Wizard">Graph Wizard</p>
+                        </div>
+                    </div>
+                </header>
+                <section
+                    class="sticky top-0 md:top-[-20px] bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm z-20 py-4 -mx-4 px-4 md:mx-0 md:px-0 border-b border-transparent">
+                    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar items-center">
+                        <button
+                            class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary text-white px-5 shadow-lg shadow-primary/25 transition-transform active:scale-95">
+                            <span class="text-sm font-semibold">All</span>
+                        </button>
+                        <button
+                            class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-surface-light dark:bg-[#283039] text-slate-600 dark:text-[#9dabb9] border border-slate-200 dark:border-slate-700 px-5 hover:bg-slate-100 dark:hover:bg-[#323b46] hover:text-primary dark:hover:text-white transition-colors">
+                            <span class="text-sm font-medium">Algorithms</span>
+                        </button>
+                        <button
+                            class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-surface-light dark:bg-[#283039] text-slate-600 dark:text-[#9dabb9] border border-slate-200 dark:border-slate-700 px-5 hover:bg-slate-100 dark:hover:bg-[#323b46] hover:text-primary dark:hover:text-white transition-colors">
+                            <span class="text-sm font-medium">Data Structures</span>
+                        </button>
+                        <button
+                            class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-surface-light dark:bg-[#283039] text-slate-600 dark:text-[#9dabb9] border border-slate-200 dark:border-slate-700 px-5 hover:bg-slate-100 dark:hover:bg-[#323b46] hover:text-primary dark:hover:text-white transition-colors">
+                            <span class="text-sm font-medium">Web Dev</span>
+                        </button>
+                        <button
+                            class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-surface-light dark:bg-[#283039] text-slate-600 dark:text-[#9dabb9] border border-slate-200 dark:border-slate-700 px-5 hover:bg-slate-100 dark:hover:bg-[#323b46] hover:text-primary dark:hover:text-white transition-colors">
+                            <span class="text-sm font-medium">Speed Runs</span>
+                        </button>
+                        <div class="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1"></div>
+                        <button
+                            class="flex h-9 shrink-0 items-center justify-center gap-x-2 px-3 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
+                            <span class="material-symbols-outlined text-xl">filter_list</span>
+                            <span class="text-sm font-medium hidden sm:block">Filter</span>
+                        </button>
+                    </div>
+                </section>
+                <section>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                        <div
+                            class="achievement-card group relative aspect-[4/5] rounded-2xl bg-gradient-to-b from-surface-light to-slate-50 dark:from-[#283039] dark:to-[#1c252e] border border-amber-500/30 p-4 flex flex-col items-center justify-center text-center cursor-pointer overflow-hidden shadow-lg shadow-amber-900/10">
+                            <div
+                                class="absolute inset-0 bg-gradient-to-tr from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                            <div
+                                class="relative size-20 md:size-24 mb-4 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 p-[2px] shadow-lg shadow-amber-500/20">
+                                <div class="w-full h-full rounded-full bg-[#1c252e] flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-5xl text-amber-400">emoji_events</span>
+                                </div>
+                                <div
+                                    class="absolute -bottom-2 bg-amber-500 text-[10px] font-bold text-[#101922] px-2 py-0.5 rounded-full uppercase tracking-widest border border-[#101922]">
+                                    Legendary</div>
+                            </div>
+                            <h3
+                                class="text-slate-900 dark:text-white font-bold text-base leading-tight mb-1 group-hover:text-amber-400 transition-colors">
+                                Graph Wizard</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs line-clamp-2">Mastered all Advanced
+                                Graph Algorithms.</p>
+                            <p class="text-slate-400 dark:text-slate-600 text-[10px] mt-auto pt-2">Earned Oct 24</p>
+                        </div>
+                        <div
+                            class="achievement-card group relative aspect-[4/5] rounded-2xl bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:border-purple-500/50 p-4 flex flex-col items-center justify-center text-center cursor-pointer">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                <span
+                                    class="material-symbols-outlined text-4xl md:text-5xl text-purple-400">psychology</span>
+                            </div>
+                            <h3
+                                class="text-slate-900 dark:text-white font-bold text-sm md:text-base leading-tight mb-1">
+                                Recursion Master</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs">Solved 50 recursive problems.</p>
+                            <p class="text-slate-400 dark:text-slate-600 text-[10px] mt-auto pt-2">Earned Oct 10</p>
+                        </div>
+                        <div
+                            class="achievement-card group relative aspect-[4/5] rounded-2xl bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:border-blue-500/50 p-4 flex flex-col items-center justify-center text-center cursor-pointer">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                <span
+                                    class="material-symbols-outlined text-4xl md:text-5xl text-blue-400">bug_report</span>
+                            </div>
+                            <h3
+                                class="text-slate-900 dark:text-white font-bold text-sm md:text-base leading-tight mb-1">
+                                Bug Hunter</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs">Found and fixed 100 bugs.</p>
+                            <p class="text-slate-400 dark:text-slate-600 text-[10px] mt-auto pt-2">Earned Sep 15</p>
+                        </div>
+                        <div
+                            class="achievement-card group relative aspect-[4/5] rounded-2xl bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:border-green-500/50 p-4 flex flex-col items-center justify-center text-center cursor-pointer">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                <span
+                                    class="material-symbols-outlined text-4xl md:text-5xl text-green-400">waving_hand</span>
+                            </div>
+                            <h3
+                                class="text-slate-900 dark:text-white font-bold text-sm md:text-base leading-tight mb-1">
+                                Hello World</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs">Completed first module.</p>
+                            <p class="text-slate-400 dark:text-slate-600 text-[10px] mt-auto pt-2">Earned Aug 01</p>
+                        </div>
+                        <div
+                            class="achievement-card group relative aspect-[4/5] rounded-2xl bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:border-cyan-500/50 p-4 flex flex-col items-center justify-center text-center cursor-pointer">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-cyan-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                <span
+                                    class="material-symbols-outlined text-4xl md:text-5xl text-cyan-400">terminal</span>
+                            </div>
+                            <h3
+                                class="text-slate-900 dark:text-white font-bold text-sm md:text-base leading-tight mb-1">
+                                CLI Pro</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs">Used 50 terminal commands.</p>
+                            <p class="text-slate-400 dark:text-slate-600 text-[10px] mt-auto pt-2">Earned Aug 05</p>
+                        </div>
+                        <div
+                            class="group relative aspect-[4/5] rounded-2xl bg-slate-100 dark:bg-[#151b22] border border-dashed border-slate-300 dark:border-slate-700 p-4 flex flex-col items-center justify-center text-center opacity-70 hover:opacity-100 transition-opacity cursor-help">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center relative">
+                                <span
+                                    class="material-symbols-outlined text-4xl md:text-5xl text-slate-400 dark:text-slate-600 blur-[2px]">hub</span>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span
+                                        class="material-symbols-outlined text-2xl text-slate-500 dark:text-slate-400 drop-shadow-md">lock</span>
+                                </div>
+                            </div>
+                            <h3
+                                class="text-slate-500 dark:text-slate-400 font-bold text-sm md:text-base leading-tight mb-1">
+                                Locked</h3>
+                            <p class="text-slate-400 dark:text-slate-600 text-xs">Complete 'Neural Networks' to reveal.
+                            </p>
+                            <div class="w-16 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mt-auto mb-1">
+                                <div class="w-2/3 h-full bg-primary rounded-full"></div>
+                            </div>
+                        </div>
+                        <div
+                            class="group relative aspect-[4/5] rounded-2xl bg-slate-100 dark:bg-[#151b22] border border-dashed border-slate-300 dark:border-slate-700 p-4 flex flex-col items-center justify-center text-center opacity-70 hover:opacity-100 transition-opacity cursor-help">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center relative">
+                                <span
+                                    class="material-symbols-outlined text-4xl md:text-5xl text-slate-400 dark:text-slate-600 blur-[2px]">security</span>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span
+                                        class="material-symbols-outlined text-2xl text-slate-500 dark:text-slate-400 drop-shadow-md">lock</span>
+                                </div>
+                            </div>
+                            <h3
+                                class="text-slate-500 dark:text-slate-400 font-bold text-sm md:text-base leading-tight mb-1">
+                                Locked</h3>
+                            <p class="text-slate-400 dark:text-slate-600 text-xs">Requires Security module lvl 5.</p>
+                            <div class="w-16 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mt-auto mb-1">
+                                <div class="w-1/4 h-full bg-primary rounded-full"></div>
+                            </div>
+                        </div>
+                        <div
+                            class="achievement-card group relative aspect-[4/5] rounded-2xl bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:border-rose-500/50 p-4 flex flex-col items-center justify-center text-center cursor-pointer">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-rose-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                <span class="material-symbols-outlined text-4xl md:text-5xl text-rose-400">timer</span>
+                            </div>
+                            <h3
+                                class="text-slate-900 dark:text-white font-bold text-sm md:text-base leading-tight mb-1">
+                                Quick Thinker</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs">Solved hard problem under 2 mins.</p>
+                            <p class="text-slate-400 dark:text-slate-600 text-[10px] mt-auto pt-2">Earned Sep 20</p>
+                        </div>
+                        <div
+                            class="achievement-card group relative aspect-[4/5] rounded-2xl bg-surface-light dark:bg-[#283039] border border-slate-200 dark:border-slate-700 hover:border-orange-500/50 p-4 flex flex-col items-center justify-center text-center cursor-pointer">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-orange-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                <span
+                                    class="material-symbols-outlined text-4xl md:text-5xl text-orange-400">local_fire_department</span>
+                            </div>
+                            <h3
+                                class="text-slate-900 dark:text-white font-bold text-sm md:text-base leading-tight mb-1">
+                                On Fire</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs">7-day continuous streak.</p>
+                            <p class="text-slate-400 dark:text-slate-600 text-[10px] mt-auto pt-2">Earned Aug 12</p>
+                        </div>
+                        <div
+                            class="group relative aspect-[4/5] rounded-2xl bg-slate-100 dark:bg-[#151b22] border border-dashed border-slate-300 dark:border-slate-700 p-4 flex flex-col items-center justify-center text-center opacity-70 hover:opacity-100 transition-opacity cursor-help">
+                            <div
+                                class="size-16 md:size-20 mb-4 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center relative">
+                                <span
+                                    class="material-symbols-outlined text-4xl md:text-5xl text-slate-400 dark:text-slate-600 blur-[2px]">dns</span>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span
+                                        class="material-symbols-outlined text-2xl text-slate-500 dark:text-slate-400 drop-shadow-md">lock</span>
+                                </div>
+                            </div>
+                            <h3
+                                class="text-slate-500 dark:text-slate-400 font-bold text-sm md:text-base leading-tight mb-1">
+                                Locked</h3>
+                            <p class="text-slate-400 dark:text-slate-600 text-xs">Complete 'Database Design'.</p>
+                            <div class="w-16 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mt-auto mb-1">
+                                <div class="w-0 h-full bg-primary rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <div class="mt-8 flex justify-center pb-8">
+                    <p class="text-slate-400 dark:text-slate-600 text-sm">Keep learning to unlock 76 more badges!</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>
