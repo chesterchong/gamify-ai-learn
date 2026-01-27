@@ -6,6 +6,7 @@ import pg from 'pg'
 import pgSession from 'connect-pg-simple'
 import authRouter from './routes/auth.js'
 import { getDatabaseUrl } from './db/databaseUrl.js'
+import prisma from './db/prisma.js'
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -47,11 +48,27 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
+app.get('/health/db', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    res.json({ status: 'ok' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({
+      error: 'Database connection failed',
+      message: process.env.DEBUG_ERRORS === 'true' ? error.message : undefined,
+    })
+  }
+})
+
 app.use('/api/auth', authRouter)
 
 app.use((err, req, res, next) => {
   console.error(err)
-  res.status(500).json({ error: 'Internal server error' })
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.DEBUG_ERRORS === 'true' ? err.message : undefined,
+  })
 })
 
 if (!process.env.VERCEL) {
