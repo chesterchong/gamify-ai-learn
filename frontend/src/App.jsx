@@ -6,6 +6,7 @@ import EditProfile from './components/EditProfile.jsx'
 import Learn from './components/Learn.jsx'
 import Login from './components/Login.jsx'
 import Profile from './components/Profile.jsx'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Quiz from './components/Quiz.jsx'
 
 function App() {
@@ -13,12 +14,54 @@ function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/learn" element={<Learn />} />
-      <Route path="/achievement" element={<Achievement />} />
-      <Route path="/quiz" element={<Quiz />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/profile/edit" element={<EditProfile />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/learn"
+        element={
+          <ProtectedRoute>
+            <Learn />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/achievement"
+        element={
+          <ProtectedRoute>
+            <Achievement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/quiz"
+        element={
+          <ProtectedRoute>
+            <Quiz />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/edit"
+        element={
+          <ProtectedRoute>
+            <EditProfile />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   )
 }
