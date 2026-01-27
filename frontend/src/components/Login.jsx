@@ -6,6 +6,7 @@ function Login() {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -247,9 +248,9 @@ function Login() {
               </div>
               <div className="relative">
                 <input
-                  className="w-full h-10 rounded-lg border border-[#dbe0e6] dark:border-slate-700 bg-white dark:bg-slate-800 text-[#111418] dark:text-white px-3 pl-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-[#617589] dark:placeholder:text-slate-500 text-sm"
+                  className="w-full h-10 rounded-lg border border-[#dbe0e6] dark:border-slate-700 bg-white dark:bg-slate-800 text-[#111418] dark:text-white px-3 pl-10 pr-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-[#617589] dark:placeholder:text-slate-500 text-sm"
                   placeholder="••••••••"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
@@ -257,6 +258,16 @@ function Login() {
                 <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#617589] dark:text-slate-500">
                   lock
                 </span>
+                <button
+                  className="absolute right-3 top-2.5 text-[#617589] dark:text-slate-500 hover:text-primary transition-colors"
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
             </label>
             {error ? (
