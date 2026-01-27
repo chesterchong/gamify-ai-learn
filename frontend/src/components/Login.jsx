@@ -1,6 +1,46 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 function Login() {
+  const navigate = useNavigate()
+  const [mode, setMode] = useState('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+    setIsSubmitting(true)
+
+    const endpoint =
+      mode === 'login' ? '/api/auth/login' : '/api/auth/register'
+
+    try {
+      const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error || 'Authentication failed')
+      }
+
+      await response.json()
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.message || 'Something went wrong')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="h-screen flex w-full overflow-hidden">
       <div className="hidden lg:flex w-1/2 relative bg-primary flex-col justify-center overflow-hidden">
@@ -115,10 +155,26 @@ function Login() {
             </p>
           </div>
           <div className="flex p-1 bg-[#f0f2f4] dark:bg-slate-800 rounded-lg">
-            <button className="flex-1 py-2 px-3 rounded-md bg-white dark:bg-slate-700 shadow-sm text-[#111418] dark:text-white text-xs font-bold transition-all duration-200">
+            <button
+              className={`flex-1 py-2 px-3 rounded-md text-xs font-bold transition-all duration-200 ${
+                mode === 'login'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm text-[#111418] dark:text-white'
+                  : 'text-[#617589] dark:text-slate-400 hover:text-[#111418] dark:hover:text-white'
+              }`}
+              type="button"
+              onClick={() => setMode('login')}
+            >
               Log In
             </button>
-            <button className="flex-1 py-2 px-3 rounded-md text-[#617589] dark:text-slate-400 hover:text-[#111418] dark:hover:text-white text-xs font-medium transition-all duration-200">
+            <button
+              className={`flex-1 py-2 px-3 rounded-md text-xs font-bold transition-all duration-200 ${
+                mode === 'signup'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm text-[#111418] dark:text-white'
+                  : 'text-[#617589] dark:text-slate-400 hover:text-[#111418] dark:hover:text-white'
+              }`}
+              type="button"
+              onClick={() => setMode('signup')}
+            >
               Sign Up
             </button>
           </div>
@@ -158,7 +214,7 @@ function Login() {
             </span>
             <div className="h-px bg-[#dbe0e6] dark:bg-slate-700 flex-1"></div>
           </div>
-          <form className="flex flex-col gap-4">
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
             <label className="flex flex-col gap-2">
               <span className="text-[#111418] dark:text-slate-200 text-xs font-bold">
                 Email
@@ -168,6 +224,9 @@ function Login() {
                   className="w-full h-10 rounded-lg border border-[#dbe0e6] dark:border-slate-700 bg-white dark:bg-slate-800 text-[#111418] dark:text-white px-3 pl-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-[#617589] dark:placeholder:text-slate-500 text-sm"
                   placeholder="student@university.edu"
                   type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
                 />
                 <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#617589] dark:text-slate-500">
                   mail
@@ -191,18 +250,29 @@ function Login() {
                   className="w-full h-10 rounded-lg border border-[#dbe0e6] dark:border-slate-700 bg-white dark:bg-slate-800 text-[#111418] dark:text-white px-3 pl-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-[#617589] dark:placeholder:text-slate-500 text-sm"
                   placeholder="••••••••"
                   type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
                 />
                 <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#617589] dark:text-slate-500">
                   lock
                 </span>
               </div>
             </label>
-            <Link
-              className="mt-1 flex w-full cursor-pointer items-center justify-center rounded-lg h-10 bg-primary hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-bold leading-normal tracking-[0.015em] transition-colors shadow-lg shadow-blue-500/30"
-              to="/achievement"
+            {error ? (
+              <div className="text-xs text-red-500 font-semibold">{error}</div>
+            ) : null}
+            <button
+              className="mt-1 flex w-full cursor-pointer items-center justify-center rounded-lg h-10 bg-primary hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-bold leading-normal tracking-[0.015em] transition-colors shadow-lg shadow-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+              type="submit"
+              disabled={isSubmitting}
             >
-              Access Your Arena
-            </Link>
+              {isSubmitting
+                ? 'Signing in...'
+                : mode === 'login'
+                  ? 'Access Your Arena'
+                  : 'Create Account'}
+            </button>
           </form>
           <div className="pt-4 border-t border-[#f0f2f4] dark:border-slate-800 flex flex-col items-center gap-3">
             <p className="text-[11px] text-[#617589] dark:text-slate-500 font-medium">
