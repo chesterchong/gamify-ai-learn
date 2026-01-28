@@ -11,6 +11,10 @@ import prisma from './db/prisma.js'
 const app = express()
 const port = process.env.PORT || 4000
 
+if (process.env.VERCEL) {
+  app.set('trust proxy', 1)
+}
+
 app.use(
   cors({
     origin: process.env.CLIENT_ORIGIN || true,
@@ -37,7 +41,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
