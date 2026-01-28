@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
+import { GravityStarsBackground } from './animate-ui/components/backgrounds/gravity-stars'
 
 function Home() {
   return (
-    <div className="bg-background-dark selection:bg-primary selection:text-black">
+    <div className="bg-background-dark selection:bg-primary selection:text-black relative overflow-hidden">
       <style>{`
         :root {
           font-family: 'JetBrains Mono', monospace;
@@ -50,7 +51,7 @@ function Home() {
           -ms-user-select: none;
         }
       `}</style>
-      <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-background-dark/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-background-dark/95 backdrop-blur-sm relative">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <Link className="flex items-center space-x-4 logo-lock" to="/">
             <div className="border border-primary px-1.5 py-0.5 text-xs text-primary font-bold">
@@ -71,8 +72,17 @@ function Home() {
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-6 py-16" />
-      <footer className="pb-16 text-[10px] text-slate-600 uppercase tracking-[0.2em] border-t border-slate-900 pt-8">
+      <main className="container mx-auto px-6 py-16 relative z-10">
+        <div className="relative min-h-[60vh]">
+          <GravityStarsBackground
+            className="pointer-events-none absolute inset-0"
+            starsOpacity={0.45}
+            glowIntensity={8}
+            movementSpeed={0.7}
+          />
+        </div>
+      </main>
+      <footer className="pb-16 text-[10px] text-slate-600 uppercase tracking-[0.2em] border-t border-slate-900 pt-8 relative z-10">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p>© 2026 CSARENA. ALL RIGHTS RESERVED.</p>
@@ -88,11 +98,6 @@ function Home() {
                 <a className="hover:text-primary transition-colors" href="#" aria-label="X">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M3 4.25h3.7l5.18 6.3 5.46-6.3H21l-7.39 8.34L21.5 20h-3.7l-5.67-6.78L6.2 20H3l7.82-8.95L3 4.25z" />
-                  </svg>
-                </a>
-                <a className="hover:text-primary transition-colors" href="#" aria-label="Discord">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M20.3 5.3A19.5 19.5 0 0 0 16 4.3c-.2.4-.4.9-.6 1.3a18 18 0 0 0-5.8 0c-.2-.4-.4-.9-.6-1.3a19.5 19.5 0 0 0-4.3 1C2.2 9 1.5 12.7 2 16.3a19.9 19.9 0 0 0 5.9 3c.5-.6.9-1.2 1.3-1.8a12.6 12.6 0 0 1-2-1l.5-.4c3.8 1.8 8 1.8 11.8 0l.6.4c-.6.4-1.3.7-2 1 .4.6.8 1.2 1.2 1.8a19.9 19.9 0 0 0 5.9-3c.6-3.5-.1-7.2-2-11zM9.4 14.3c-.7 0-1.3-.7-1.3-1.6s.6-1.6 1.3-1.6 1.3.7 1.3 1.6-.6 1.6-1.3 1.6zm5.2 0c-.7 0-1.3-.7-1.3-1.6s.6-1.6 1.3-1.6 1.3.7 1.3 1.6-.6 1.6-1.3 1.6z" />
                   </svg>
                 </a>
                 <a className="hover:text-primary transition-colors" href="#" aria-label="LinkedIn">

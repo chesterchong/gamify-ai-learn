@@ -140,15 +140,6 @@ function Terms() {
                 <a className="px-4 py-2 hover:text-primary transition-all border-l-2 border-transparent hover:border-slate-600" href="#contact">06 Contact Admin</a>
               </div>
             </nav>
-            <div className="mt-12 p-4 border border-slate-800 bg-panel-dark">
-              <h4 className="text-[10px] font-bold text-secondary mb-2 flex items-center uppercase tracking-widest">
-                <span className="material-symbols-outlined text-sm mr-2">priority_high</span>
-                Help Queue
-              </h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed uppercase">
-                Direct technical and legal inquiries to the admin console.
-              </p>
-            </div>
           </div>
         </aside>
         <div className="flex-1 max-w-4xl">
@@ -267,11 +258,6 @@ function Terms() {
                   <a className="hover:text-primary transition-colors" href="#" aria-label="X">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M3 4.25h3.7l5.18 6.3 5.46-6.3H21l-7.39 8.34L21.5 20h-3.7l-5.67-6.78L6.2 20H3l7.82-8.95L3 4.25z" />
-                    </svg>
-                  </a>
-                  <a className="hover:text-primary transition-colors" href="#" aria-label="Discord">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M20.3 5.3A19.5 19.5 0 0 0 16 4.3c-.2.4-.4.9-.6 1.3a18 18 0 0 0-5.8 0c-.2-.4-.4-.9-.6-1.3a19.5 19.5 0 0 0-4.3 1C2.2 9 1.5 12.7 2 16.3a19.9 19.9 0 0 0 5.9 3c.5-.6.9-1.2 1.3-1.8a12.6 12.6 0 0 1-2-1l.5-.4c3.8 1.8 8 1.8 11.8 0l.6.4c-.6.4-1.3.7-2 1 .4.6.8 1.2 1.2 1.8a19.9 19.9 0 0 0 5.9-3c.6-3.5-.1-7.2-2-11zM9.4 14.3c-.7 0-1.3-.7-1.3-1.6s.6-1.6 1.3-1.6 1.3.7 1.3 1.6-.6 1.6-1.3 1.6zm5.2 0c-.7 0-1.3-.7-1.3-1.6s.6-1.6 1.3-1.6 1.3.7 1.3 1.6-.6 1.6-1.3 1.6z" />
                     </svg>
                   </a>
                   <a className="hover:text-primary transition-colors" href="#" aria-label="LinkedIn">
