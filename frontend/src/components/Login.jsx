@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import supabase from '../lib/supabase'
 
 function Login() {
@@ -320,9 +320,6 @@ function Login() {
                 <span className="text-[#111418] dark:text-slate-200 text-xs font-bold">
                   Password
                 </span>
-                <a className="text-primary text-xs font-bold hover:underline" href="#">
-                  Forgot?
-                </a>
               </div>
               <div className="relative">
                 <input
@@ -346,6 +343,11 @@ function Login() {
                     {showPassword ? 'visibility_off' : 'visibility'}
                   </span>
                 </button>
+              </div>
+              <div className="flex justify-end">
+                <a className="text-primary text-xs font-bold hover:underline" href="#">
+                  Forgot?
+                </a>
               </div>
             </label>
             {error ? (
@@ -390,9 +392,9 @@ function Login() {
           </div>
           <p className="text-center text-[11px] text-[#9aa6b2] dark:text-slate-600 mt-3">
             By clicking "Access Your Arena", you agree to our{' '}
-            <a className="underline hover:text-primary" href="#">
+            <Link className="underline hover:text-primary" to="/terms">
               Terms of Service
-            </a>{' '}
+            </Link>{' '}
             and{' '}
             <a className="underline hover:text-primary" href="#">
               Privacy Policy
