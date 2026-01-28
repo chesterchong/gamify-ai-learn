@@ -1,7 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import supabase from '../lib/supabase'
 
 function Layout({ title, children, mainClassName = '' }) {
   const navigate = useNavigate()
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
   const navLinkClass = ({ isActive }) =>
     [
       'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors border-l-4',
@@ -86,10 +88,18 @@ function Layout({ title, children, mainClassName = '' }) {
             </div>
             <button
               className="mt-3 w-full flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-[#9dabb9] hover:text-primary hover:bg-slate-100 dark:hover:bg-[#1c232b] active:scale-[0.98] transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 dark:focus-visible:ring-offset-[#111418] rounded-lg"
-              onClick={() => {
-                localStorage.clear()
-                sessionStorage.clear()
-                navigate('/login', { replace: true })
+              onClick={async () => {
+                try {
+                  await fetch(`${apiBaseUrl}/api/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include',
+                  })
+                } catch (error) {
+                  // Ignore logout failures and still clear client state.
+                } finally {
+                  await supabase.auth.signOut()
+                  navigate('/login', { replace: true })
+                }
               }}
               type="button"
             >
