@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import TopNav from './TopNav'
 
 function Terms() {
   useEffect(() => {
@@ -102,27 +103,7 @@ function Terms() {
           border-bottom: 0;
         }
       `}</style>
-      <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-background-dark/95 backdrop-blur-sm">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link className="flex items-center space-x-4 logo-lock" to="/">
-            <div className="border border-primary px-1.5 py-0.5 text-xs text-primary font-bold">
-              CORE
-            </div>
-            <span className="text-xl font-bold tracking-widest text-white uppercase">CSarena</span>
-          </Link>
-          <div className="flex items-center space-x-8">
-            <a className="text-xs uppercase tracking-widest hover:text-primary transition-colors" href="#">
-              [ Home ]
-            </a>
-            <a className="text-xs uppercase tracking-widest hover:text-primary transition-colors" href="#">
-              [ Arena ]
-            </a>
-            <a className="border border-primary text-primary px-4 py-2 text-xs font-bold hover:bg-primary hover:text-black transition-all" href="#">
-              DASHBOARD LOGIN
-            </a>
-          </div>
-        </div>
-      </header>
+      <TopNav />
       <main className="container mx-auto px-6 py-16 flex flex-col md:flex-row gap-16">
         <aside className="w-full md:w-64 flex-shrink-0">
           <div className="sticky top-32">

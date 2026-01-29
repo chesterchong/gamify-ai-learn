@@ -67,7 +67,7 @@ function LearningPathOverview({ onOpenModule }) {
       <div className="circuit-bg">
         <div className="max-w-5xl mx-auto w-full p-6 lg:p-12 space-y-10 pb-24 relative z-10">
           <header className="mb-10">
-            <div className="mt-8 flex flex-col gap-3">
+            <div className="mt-0 flex flex-col gap-3">
               <div className="flex flex-col md:flex-row gap-3">
                 <div className="relative flex-1">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">

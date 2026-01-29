@@ -1,8 +1,11 @@
-import Layout from './Layout.jsx'
+import TermsThemeStyles from './TermsThemeStyles'
+import TopNav from './TopNav'
 
 function Quiz() {
   return (
-    <Layout title="Quiz">
+    <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen">
+      <TermsThemeStyles />
+      <TopNav />
       <style>{`
         .code-syntax-keyword {
           color: #C678DD;
@@ -28,7 +31,7 @@ function Quiz() {
           scrollbar-width: none;
         }
       `}</style>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-[calc(100vh-4rem)]">
         <header className="flex items-center justify-between px-6 py-4 bg-surface-light dark:bg-surface-dark border-b border-[#e5e7eb] dark:border-[#2d3b4a]">
           <button className="flex items-center gap-2 text-[#637588] dark:text-[#94a3b8] hover:text-[#111418] dark:hover:text-white transition-colors">
             <span className="material-symbols-outlined text-[24px]">close</span>
@@ -203,7 +206,7 @@ function Quiz() {
           </div>
         </footer>
       </div>
-    </Layout>
+    </div>
   )
 }
 

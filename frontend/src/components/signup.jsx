@@ -199,7 +199,7 @@ function Signup() {
         }
 
         await response.json()
-        navigate('/dashboard')
+        navigate('/dash')
       } catch (err) {
         if (isMounted) {
           setError(err.message || 'GitHub login failed')
@@ -255,6 +255,7 @@ function Signup() {
 
   const handleEmailClick = () => {
     setShowEmailForm(true)
+    setMode('login')
   }
 
   const handleSubmit = async (event) => {
@@ -279,7 +280,7 @@ function Signup() {
       }
 
       await response.json()
-      navigate('/dashboard')
+      navigate('/dash')
     } catch (err) {
       setError(err.message || 'Something went wrong')
     } finally {

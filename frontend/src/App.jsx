@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Quiz from './components/Quiz.jsx'
 import Terms from './components/Terms.jsx'
 import Signup from './components/signup.jsx'
+import Dash from './components/dash.jsx'
 
 function App() {
   return (
@@ -17,12 +18,20 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Signup />} />
       <Route path="/signup" element={<Signup />} />
+      <Route
+        path="/dash"
+        element={
+          <ProtectedRoute>
+            <Dash />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/terms" element={<Terms />} />
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <Navigate to="/dash" replace />
           </ProtectedRoute>
         }
       />

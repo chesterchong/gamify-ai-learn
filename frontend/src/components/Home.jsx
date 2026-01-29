@@ -1,36 +1,9 @@
-import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { gsap } from 'gsap'
 import { GravityStarsBackground } from './animate-ui/components/backgrounds/gravity-stars'
 import GradientText from './GradientText'
+import TopNav from './TopNav'
 
 function Home() {
-  const loginButtonRef = useRef(null)
-  const loginFillRef = useRef(null)
-
-  useEffect(() => {
-    const button = loginButtonRef.current
-    const fill = loginFillRef.current
-    if (!button || !fill) return undefined
-
-    gsap.set(fill, { scaleX: 0, transformOrigin: 'left center' })
-
-    const onEnter = () => {
-      gsap.to(fill, { scaleX: 1, duration: 0.4, ease: 'power3.out' })
-    }
-    const onLeave = () => {
-      gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power3.in' })
-    }
-
-    button.addEventListener('mouseenter', onEnter)
-    button.addEventListener('mouseleave', onLeave)
-
-    return () => {
-      button.removeEventListener('mouseenter', onEnter)
-      button.removeEventListener('mouseleave', onLeave)
-    }
-  }, [])
-
   return (
     <div className="bg-background-dark selection:bg-primary selection:text-black relative overflow-hidden">
       <style>{`
@@ -169,26 +142,7 @@ function Home() {
           filter: grayscale(0);
         }
       `}</style>
-      <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-background-dark/95 backdrop-blur-sm relative">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link className="flex items-center space-x-4 logo-lock" to="/">
-            <div className="border border-primary px-1.5 py-0.5 text-xs text-primary font-bold">
-              CORE
-            </div>
-            <span className="text-xl font-bold tracking-widest text-white uppercase">CSarena</span>
-          </Link>
-          <div className="flex items-center space-x-8">
-            <Link
-              className="border border-primary text-primary px-4 py-2 text-xs font-bold hover:bg-primary hover:text-black transition-all pill-anim"
-              to="/signup"
-              ref={loginButtonRef}
-            >
-              <span className="pill-anim-fill" ref={loginFillRef} />
-              <span className="pill-anim-content">LOGIN/REGISTER</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <TopNav />
       <main className="container mx-auto px-6 py-16 relative z-10">
         <div className="relative min-h-[60vh]">
           <GravityStarsBackground

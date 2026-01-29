@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import Layout from './Layout.jsx'
 
 function Dashboard() {
@@ -12,7 +13,20 @@ function Dashboard() {
           scrollbar-width: none;
         }
       `}</style>
-      <div className="max-w-[800px] mx-auto px-6 py-8 pb-32">
+      <header className="w-full border-b border-slate-800 bg-background-dark/95 backdrop-blur-sm mb-8">
+        <div className="max-w-[960px] mx-auto px-6 h-16 flex items-center justify-between">
+          <Link className="flex items-center space-x-4 logo-lock" to="/">
+            <div className="border border-primary px-1.5 py-0.5 text-xs text-primary font-bold">
+              CORE
+            </div>
+            <span className="text-xl font-bold tracking-widest text-white uppercase">CSarena</span>
+          </Link>
+          <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">
+            Dashboard
+          </span>
+        </div>
+      </header>
+      <div className="max-w-[800px] mx-auto px-6 pb-32">
         <div className="flex flex-col gap-2 mb-8">
           <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white">
             Welcome back, Min Kit!

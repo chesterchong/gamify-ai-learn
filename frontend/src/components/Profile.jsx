@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import Layout from './Layout.jsx'
 import ProfileShareModal from './ProfileShareModal.jsx'
+import TermsThemeStyles from './TermsThemeStyles'
+import TopNav from './TopNav'
 
 function Profile() {
   const [isShareOpen, setIsShareOpen] = useState(false)
   const profileShareLink = 'sample.com/u/chester'
 
   return (
-    <Layout title="Profile">
+    <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen">
+      <TermsThemeStyles />
+      <TopNav />
       <style>{`
         ::-webkit-scrollbar {
           width: 8px;
@@ -466,7 +469,7 @@ function Profile() {
         link={profileShareLink}
         onClose={() => setIsShareOpen(false)}
       />
-    </Layout>
+    </div>
   )
 }
 
