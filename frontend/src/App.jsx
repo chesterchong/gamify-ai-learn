@@ -5,17 +5,18 @@ import Dashboard from './components/Dashboard.jsx'
 import EditProfile from './components/EditProfile.jsx'
 import Home from './components/Home.jsx'
 import Learn from './components/Learn.jsx'
-import Login from './components/Login.jsx'
 import Profile from './components/Profile.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Quiz from './components/Quiz.jsx'
 import Terms from './components/Terms.jsx'
+import Signup from './components/signup.jsx'
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<Signup />} />
+      <Route path="/signup" element={<Signup />} />
       <Route path="/terms" element={<Terms />} />
       <Route
         path="/dashboard"

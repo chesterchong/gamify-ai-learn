@@ -1,13 +1,43 @@
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { gsap } from 'gsap'
 import { GravityStarsBackground } from './animate-ui/components/backgrounds/gravity-stars'
+import GradientText from './GradientText'
 
 function Home() {
+  const loginButtonRef = useRef(null)
+  const loginFillRef = useRef(null)
+
+  useEffect(() => {
+    const button = loginButtonRef.current
+    const fill = loginFillRef.current
+    if (!button || !fill) return undefined
+
+    gsap.set(fill, { scaleX: 0, transformOrigin: 'left center' })
+
+    const onEnter = () => {
+      gsap.to(fill, { scaleX: 1, duration: 0.4, ease: 'power3.out' })
+    }
+    const onLeave = () => {
+      gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power3.in' })
+    }
+
+    button.addEventListener('mouseenter', onEnter)
+    button.addEventListener('mouseleave', onLeave)
+
+    return () => {
+      button.removeEventListener('mouseenter', onEnter)
+      button.removeEventListener('mouseleave', onLeave)
+    }
+  }, [])
+
   return (
     <div className="bg-background-dark selection:bg-primary selection:text-black relative overflow-hidden">
       <style>{`
         :root {
           font-family: 'JetBrains Mono', monospace;
         }
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
         .bg-background-dark { background-color: #05070a; }
         .bg-panel-dark { background-color: #0a0f14; }
         .bg-accent-dark { background-color: #1a1f26; }
@@ -15,6 +45,7 @@ function Home() {
         .text-secondary { color: #00ff41; }
         .border-primary { border-color: #00f3ff; }
         .border-secondary { border-color: #00ff41; }
+        .bg-accent-lime { background-color: #d9f99d; }
         .bg-secondary\\/5 { background-color: rgba(0, 255, 65, 0.05); }
         .bg-secondary\\/10 { background-color: rgba(0, 255, 65, 0.1); }
         .bg-primary\\/5 { background-color: rgba(0, 243, 255, 0.05); }
@@ -50,6 +81,93 @@ function Home() {
           -webkit-user-select: none;
           -ms-user-select: none;
         }
+        .hero-serif {
+          font-family: 'Cormorant Garamond', serif;
+        }
+        @keyframes hero-fade-up {
+          from {
+            opacity: 0;
+            transform: translateY(18px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .hero-fade-up {
+          animation: hero-fade-up 0.9s ease-out both;
+        }
+        .hero-fade-up-delay {
+          animation: hero-fade-up 0.9s ease-out both;
+          animation-delay: 0.15s;
+        }
+        .pill-anim {
+          position: relative;
+          overflow: hidden;
+        }
+        .pill-anim-fill {
+          position: absolute;
+          inset: 0;
+          background: rgba(0, 243, 255, 0.12);
+          z-index: 0;
+          pointer-events: none;
+        }
+        .pill-anim-content {
+          position: relative;
+          z-index: 1;
+        }
+        @keyframes hero-pill-fade {
+          from {
+            opacity: 0;
+            transform: translateX(-16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .hero-pill-animate {
+          animation: hero-pill-fade 0.9s ease-out both;
+        }
+        .glass-card {
+          background: rgba(15, 23, 42, 0.35);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          backdrop-filter: blur(12px);
+        }
+      `}</style>
+      <style>{`
+        @keyframes marquee-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .marquee {
+          overflow: hidden;
+          mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+        }
+        .marquee-track {
+          display: flex;
+          gap: 1rem;
+          width: max-content;
+          animation: marquee-scroll 30s linear infinite;
+        }
+        .marquee-item {
+          min-width: 220px;
+          padding: 0.25rem 0.5rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          font-size: 14px;
+          color: #cbd5f5;
+          opacity: 0.4;
+          filter: grayscale(1);
+          transition: opacity 0.4s ease, filter 0.4s ease;
+        }
+        .marquee-item:hover {
+          opacity: 1;
+          filter: grayscale(0);
+        }
       `}</style>
       <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-background-dark/95 backdrop-blur-sm relative">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
@@ -60,15 +178,14 @@ function Home() {
             <span className="text-xl font-bold tracking-widest text-white uppercase">CSarena</span>
           </Link>
           <div className="flex items-center space-x-8">
-            <a className="text-xs uppercase tracking-widest hover:text-primary transition-colors" href="#">
-              [ Home ]
-            </a>
-            <a className="text-xs uppercase tracking-widest hover:text-primary transition-colors" href="#">
-              [ Arena ]
-            </a>
-            <a className="border border-primary text-primary px-4 py-2 text-xs font-bold hover:bg-primary hover:text-black transition-all" href="#">
-              DASHBOARD LOGIN
-            </a>
+            <Link
+              className="border border-primary text-primary px-4 py-2 text-xs font-bold hover:bg-primary hover:text-black transition-all pill-anim"
+              to="/signup"
+              ref={loginButtonRef}
+            >
+              <span className="pill-anim-fill" ref={loginFillRef} />
+              <span className="pill-anim-content">LOGIN/REGISTER</span>
+            </Link>
           </div>
         </div>
       </header>
@@ -80,6 +197,105 @@ function Home() {
             glowIntensity={8}
             movementSpeed={0.7}
           />
+          <div className="relative z-10 mt-6">
+            <div className="max-w-3xl hero-fade-up">
+              <Link className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/5 border border-slate-700/60 mb-8 transition-transform hover:scale-105 cursor-pointer hero-pill-animate" to="/terms">
+                <span className="border border-primary text-primary text-[10px] font-bold px-2 py-0.5 rounded-full transition-all hover:bg-primary hover:text-slate-900">NEW</span>
+                <GradientText className="text-xs font-medium text-slate-300" animationSpeed={6}>
+                  Generative AI mastery path now live
+                </GradientText>
+                <span className="material-symbols-outlined text-xs">chevron_right</span>
+              </Link>
+              <h1 className="text-5xl lg:text-7xl font-bold leading-tight mb-6 hero-serif">
+                <span className="text-primary">CSarena</span>
+                <br />
+                <span className="text-white text-3xl lg:text-5xl">Master the</span>{' '}
+                <span className="italic font-light text-3xl lg:text-5xl">Machine</span>{' '}
+                <span className="text-white text-3xl lg:text-5xl">Intelligence</span>
+              </h1>
+              <p className="text-lg text-white mb-10 max-w-lg leading-relaxed hero-serif">
+                The gamified path to frontier AI and Computer Science. Embark on quests, conquer algorithms, and level up with verifiable skills.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link
+                  className="px-8 py-4 bg-accent-lime text-slate-900 font-bold rounded-xl flex items-center justify-center gap-2 hover:shadow-[0_0_30px_rgba(217,249,157,0.4)] transition-all hover:-translate-y-1 hero-fade-up-delay"
+                  to="/signup"
+                >
+                  <span className="material-symbols-outlined">rocket_launch</span>
+                  Get Started
+                </Link>
+              </div>
+            </div>
+          </div>
+          <div className="relative z-10 mt-16">
+            <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-4 text-center">
+              Trusted By
+            </p>
+            <div className="marquee">
+              <div className="marquee-track">
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UM</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">Monash</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">TARUMT</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UPM</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UTAR</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UM</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">Monash</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">TARUMT</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UPM</span>
+                </div>
+                <div className="marquee-item">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UTAR</span>
+                </div>
+                <div className="marquee-item" aria-hidden="true">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UM</span>
+                </div>
+                <div className="marquee-item" aria-hidden="true">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">Monash</span>
+                </div>
+                <div className="marquee-item" aria-hidden="true">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">TARUMT</span>
+                </div>
+                <div className="marquee-item" aria-hidden="true">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UPM</span>
+                </div>
+                <div className="marquee-item" aria-hidden="true">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                  <span className="font-bold text-lg">UTAR</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
       <footer className="pb-16 text-[10px] text-slate-600 uppercase tracking-[0.2em] border-t border-slate-900 pt-8 relative z-10">
