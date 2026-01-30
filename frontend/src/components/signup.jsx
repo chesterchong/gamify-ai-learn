@@ -13,7 +13,9 @@ function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false)
   const [isGitHubSubmitting, setIsGitHubSubmitting] = useState(false)
+  const [authSuccess, setAuthSuccess] = useState(false)
   const [error, setError] = useState('')
   
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -199,7 +201,7 @@ function Signup() {
         }
 
         await response.json()
-        navigate('/dash')
+        if (isMounted) setAuthSuccess(true)
       } catch (err) {
         if (isMounted) {
           setError(err.message || 'GitHub login failed')
@@ -207,6 +209,7 @@ function Signup() {
       } finally {
         if (isMounted) {
           setIsSubmitting(false)
+          setIsGoogleSubmitting(false)
           setIsGitHubSubmitting(false)
         }
       }
@@ -219,10 +222,21 @@ function Signup() {
     }
   }, [apiBaseUrl, navigate])
 
+  useEffect(() => {
+    if (!authSuccess) return
+    const t = setTimeout(() => navigate('/dash'), 1800)
+    return () => clearTimeout(t)
+  }, [authSuccess, navigate])
+
   const handleGitHubLogin = async () => {
     setError('')
     setIsGitHubSubmitting(true)
 
+    // Note: For GitHub OAuth to work, you must register Supabase's callback URL
+    // in your GitHub OAuth app settings:
+    // https://<your-project-id>.supabase.co/auth/v1/callback
+    // This is different from the redirectTo URL below, which is where Supabase
+    // redirects AFTER handling the OAuth callback.
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
@@ -238,7 +252,7 @@ function Signup() {
 
   const handleGoogleLogin = async () => {
     setError('')
-    setIsGitHubSubmitting(true)
+    setIsGoogleSubmitting(true)
 
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -249,7 +263,7 @@ function Signup() {
 
     if (authError) {
       setError(authError.message || 'Google login failed')
-      setIsGitHubSubmitting(false)
+      setIsGoogleSubmitting(false)
     }
   }
 
@@ -299,6 +313,7 @@ function Signup() {
         .text-secondary { color: #00ff41; }
         .border-primary { border-color: #00f3ff; }
         .border-secondary { border-color: #00ff41; }
+        .bg-secondary\\/10 { background-color: rgba(0, 255, 65, 0.1); }
         .bg-background-dark\\/95 { background-color: rgba(5, 7, 10, 0.95); }
         body {
           background-color: #05070a;
@@ -415,6 +430,16 @@ function Signup() {
         />
 
         <div className="relative max-w-md mx-auto w-full">
+          {authSuccess ? (
+            <div className="text-center py-8">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full border-2 border-secondary bg-secondary/10 mb-4">
+                <span className="material-symbols-outlined text-3xl text-secondary">check_circle</span>
+              </div>
+              <p className="text-lg font-semibold text-secondary">Successfully authorised</p>
+              <p className="text-sm text-slate-400 mt-1">Redirecting to dashboard...</p>
+            </div>
+          ) : (
+            <>
           <div className="text-center mb-10">
             <p className="text-base">
               <span className="sparkle-emoji">✨</span>{' '}
@@ -435,7 +460,7 @@ function Signup() {
             <button
               ref={googleButtonRef}
               onClick={handleGoogleLogin}
-              disabled={isGitHubSubmitting}
+              disabled={isGoogleSubmitting}
               className="flex items-center justify-center gap-2 w-full py-2.5 px-3 glass-card rounded-lg hover:border-primary border border-slate-800 transition-all text-white text-sm font-medium pill-anim disabled:opacity-60 disabled:cursor-not-allowed"
               type="button"
             >
@@ -447,7 +472,7 @@ function Signup() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                <span>Continue with Google</span>
+                <span>{isGoogleSubmitting ? 'Connecting...' : 'Continue with Google'}</span>
               </span>
             </button>
 
@@ -596,6 +621,8 @@ function Signup() {
             </Link>
             .
           </div>
+            </>
+          )}
         </div>
       </main>
     </div>
