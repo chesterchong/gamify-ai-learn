@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import TopNav from './TopNav'
 
 function Terms() {
   useEffect(() => {
@@ -103,7 +102,6 @@ function Terms() {
           border-bottom: 0;
         }
       `}</style>
-      <TopNav />
       <main className="container mx-auto px-6 py-16 flex flex-col md:flex-row gap-16">
         <aside className="w-full md:w-64 flex-shrink-0">
           <div className="sticky top-32">

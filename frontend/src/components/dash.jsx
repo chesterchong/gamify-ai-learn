@@ -1,4 +1,3 @@
-import TopNav from './TopNav'
 import TermsThemeStyles from './TermsThemeStyles'
 import ShinyText from './ShinyText'
 
@@ -22,22 +21,7 @@ function Dash() {
         .dash-v2 .glow-purple {
           box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
         }
-<<<<<<< Current (Your changes)
-        .dash-v2 .sparkle-emoji {
-          display: inline-block;
-          animation: dash-sparkle 2s ease-in-out infinite;
-        }
-        @keyframes dash-sparkle {
-          0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
-          25% { transform: scale(1.2) rotate(90deg); opacity: 0.8; }
-          50% { transform: scale(1.1) rotate(180deg); opacity: 1; }
-          75% { transform: scale(1.2) rotate(270deg); opacity: 0.8; }
-        }
-=======
->>>>>>> Incoming (Background Agent changes)
       `}</style>
-
-      <TopNav />
 
       <main className="dash-v2 min-h-[calc(100vh-4rem)]">
         <div className="p-6 md:p-8 max-w-7xl mx-auto">

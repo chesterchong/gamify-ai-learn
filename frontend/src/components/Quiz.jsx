@@ -1,11 +1,9 @@
 import TermsThemeStyles from './TermsThemeStyles'
-import TopNav from './TopNav'
 
 function Quiz() {
   return (
     <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen">
       <TermsThemeStyles />
-      <TopNav />
       <style>{`
         .code-syntax-keyword {
           color: #C678DD;

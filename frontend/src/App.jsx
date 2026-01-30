@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import Achievement from './components/Achievement.jsx'
+import AppLayout from './components/AppLayout.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import EditProfile from './components/EditProfile.jsx'
 import Home from './components/Home.jsx'
@@ -15,66 +16,68 @@ import Dash from './components/dash.jsx'
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Signup />} />
       <Route path="/signup" element={<Signup />} />
-      <Route
-        path="/dash"
-        element={
-          <ProtectedRoute>
-            <Dash />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/terms" element={<Terms />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Navigate to="/dash" replace />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/learn"
-        element={
-          <ProtectedRoute>
-            <Learn />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/achievement"
-        element={
-          <ProtectedRoute>
-            <Achievement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/quiz"
-        element={
-          <ProtectedRoute>
-            <Quiz />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile/edit"
-        element={
-          <ProtectedRoute>
-            <EditProfile />
-          </ProtectedRoute>
-        }
-      />
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route
+          path="/dash"
+          element={
+            <ProtectedRoute>
+              <Dash />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/dash" replace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learn"
+          element={
+            <ProtectedRoute>
+              <Learn />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/achievement"
+          element={
+            <ProtectedRoute>
+              <Achievement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/quiz"
+          element={
+            <ProtectedRoute>
+              <Quiz />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile/edit"
+          element={
+            <ProtectedRoute>
+              <EditProfile />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
     </Routes>
   )
 }

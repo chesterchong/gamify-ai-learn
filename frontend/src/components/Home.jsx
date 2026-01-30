@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { GravityStarsBackground } from './animate-ui/components/backgrounds/gravity-stars'
 import GradientText from './GradientText'
-import TopNav from './TopNav'
 
 function Home() {
   return (
@@ -142,7 +141,6 @@ function Home() {
           filter: grayscale(0);
         }
       `}</style>
-      <TopNav />
       <main className="container mx-auto px-6 py-16 relative z-10">
         <div className="relative min-h-[60vh]">
           <GravityStarsBackground

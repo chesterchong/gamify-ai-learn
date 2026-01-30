@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProfileShareModal from './ProfileShareModal.jsx'
 import TermsThemeStyles from './TermsThemeStyles'
-import TopNav from './TopNav'
 
 function Profile() {
   const [isShareOpen, setIsShareOpen] = useState(false)
@@ -11,7 +10,6 @@ function Profile() {
   return (
     <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen">
       <TermsThemeStyles />
-      <TopNav />
       <style>{`
         ::-webkit-scrollbar {
           width: 8px;
