@@ -1,5 +1,6 @@
 import TopNav from './TopNav'
 import TermsThemeStyles from './TermsThemeStyles'
+import ShinyText from './ShinyText'
 
 function Dash() {
   return (
@@ -8,159 +9,189 @@ function Dash() {
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .dash-v2 .dash-primary { color: #257bf4; }
+        .dash-v2 .dash-primary-bg { background-color: #257bf4; }
+        .dash-v2 .dash-surface { background-color: #161b22; }
+        .dash-v2 .dash-surface-border { border-color: #1f2937; }
+        .dash-v2 .donut-gradient {
+          background: conic-gradient(#257bf4 84%, #1e293b 0);
+        }
+        .dash-v2 .glow-blue {
+          box-shadow: 0 0 15px rgba(37, 123, 244, 0.2);
+        }
+        .dash-v2 .glow-purple {
+          box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+        }
+<<<<<<< Current (Your changes)
+        .dash-v2 .sparkle-emoji {
+          display: inline-block;
+          animation: dash-sparkle 2s ease-in-out infinite;
+        }
+        @keyframes dash-sparkle {
+          0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+          25% { transform: scale(1.2) rotate(90deg); opacity: 0.8; }
+          50% { transform: scale(1.1) rotate(180deg); opacity: 1; }
+          75% { transform: scale(1.2) rotate(270deg); opacity: 0.8; }
+        }
+=======
+>>>>>>> Incoming (Background Agent changes)
       `}</style>
 
       <TopNav />
 
-      <main className="no-scrollbar">
-        <div className="max-w-[800px] mx-auto px-6 py-8 pb-32">
-          <div className="flex flex-col gap-2 mb-8">
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white">
-              Welcome back, Min Kit!
+      <main className="dash-v2 min-h-[calc(100vh-4rem)]">
+        <div className="p-6 md:p-8 max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h2 className="text-3xl font-black tracking-tight">
+              <span className="sparkle-emoji">✨</span>{' '}
+              <ShinyText
+                text="Performance Analytics"
+                color="#94a3b8"
+                shineColor="#ffffff"
+                speed={2}
+                spread={120}
+              />
             </h2>
-            <p className="text-text-secondary text-base">
-              You're on a 12-day streak. Keep the momentum going!
-            </p>
           </div>
-          <div className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-surface-dark to-[#1a1d24] border border-surface-border p-6 mb-12 shadow-lg hover:border-primary/50 transition-colors">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <span className="material-symbols-outlined text-9xl">code</span>
-            </div>
-            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-primary/20 text-primary text-xs font-bold mb-2 uppercase tracking-wide">
-                  Current Session
+
+          <div className="grid grid-cols-12 gap-6 mb-6">
+            <div className="col-span-12 lg:col-span-8 relative overflow-hidden bg-slate-900 rounded-2xl p-6 md:p-8 border border-primary/30 group">
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-[100px] rounded-full" style={{ backgroundColor: 'rgba(37,123,244,0.2)' }} />
+              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/20 blur-[100px] rounded-full" />
+              <div className="relative z-10 h-full flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined dash-primary" style={{ color: '#257bf4' }}>auto_awesome</span>
+                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#257bf4' }}>AI Success Prediction</span>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-1">
-                  Unit 2: Object-Oriented Programming
-                </h3>
-                <p className="text-text-secondary text-sm">
-                  Lesson 4 • Inheritance &amp; Polymorphism
-                </p>
-              </div>
-              <button className="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-primary/20 transition-all transform active:scale-95">
-                <span className="material-symbols-outlined">play_circle</span>
-                <span>Resume Coding</span>
-              </button>
-            </div>
-          </div>
-          <div className="relative flex flex-col items-center">
-            <div className="absolute top-0 bottom-0 w-1 bg-surface-border left-[30px] sm:left-1/2 -ml-0.5 z-0"></div>
-            <div className="relative w-full flex items-center mb-12 z-10 group">
-              <div className="flex sm:w-1/2 justify-start sm:justify-end pr-8 sm:pr-12 order-2 sm:order-1 ml-16 sm:ml-0">
-                <div className="bg-surface-dark p-4 rounded-xl border border-primary/30 shadow-[0_0_15px_rgba(19,127,236,0.15)] max-w-[280px] w-full relative">
-                  <div className="absolute right-0 top-1/2 -mt-2 -mr-1.5 w-3 h-3 bg-surface-dark border-t border-r border-primary/30 rotate-45 hidden sm:block"></div>
-                  <div className="absolute left-0 top-1/2 -mt-2 -ml-1.5 w-3 h-3 bg-surface-dark border-b border-l border-primary/30 rotate-45 block sm:hidden"></div>
-                  <h4 className="text-white font-bold text-lg">Logic Gates</h4>
-                  <p className="text-primary text-sm font-medium mt-1">
-                    Completed • 100% Score
-                  </p>
+                <div className="flex flex-wrap items-end gap-8 mb-8">
+                  <div>
+                    <p className="text-slate-400 text-sm mb-1">Exam Readiness</p>
+                    <h4 className="text-4xl md:text-5xl font-black text-white">High <span className="text-2xl ml-2" style={{ color: '#257bf4' }}>94%</span></h4>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm mb-1">Confidence Score</p>
+                    <h4 className="text-2xl font-bold text-slate-200">89%</h4>
+                  </div>
                 </div>
-              </div>
-              <div className="absolute left-[10px] sm:left-1/2 sm:-ml-[20px] w-[40px] h-[40px] rounded-full bg-primary flex items-center justify-center shadow-[0_0_20px_#137fec] ring-4 ring-background-dark z-20">
-                <span className="material-symbols-outlined text-white text-2xl font-bold">
-                  check
-                </span>
-              </div>
-              <div className="absolute top-[-48px] bottom-1/2 w-1 bg-primary left-[30px] sm:left-1/2 -ml-0.5 -z-10 shadow-[0_0_8px_rgba(19,127,236,0.6)]"></div>
-              <div className="hidden sm:block w-1/2 pl-12 order-2">
-                <span className="text-text-secondary text-sm font-mono opacity-50">
-                  UNIT 01
-                </span>
-              </div>
-            </div>
-            <div className="relative w-full flex items-center mb-12 z-10">
-              <div className="hidden sm:block w-1/2 pr-12 text-right order-1">
-                <span className="text-primary text-sm font-mono font-bold">
-                  UNIT 02 - ACTIVE
-                </span>
-              </div>
-              <div className="absolute left-[2px] sm:left-1/2 sm:-ml-[28px] w-[56px] h-[56px] rounded-full bg-background-dark border-[3px] border-primary flex items-center justify-center shadow-[0_0_30px_rgba(19,127,236,0.4)] ring-4 ring-background-dark z-20">
-                <div className="w-2 h-2 bg-primary rounded-full animate-ping absolute"></div>
-                <span className="material-symbols-outlined text-primary text-3xl">
-                  code
-                </span>
-              </div>
-              <div className="absolute top-[-48px] bottom-1/2 w-1 bg-gradient-to-b from-primary to-surface-border left-[30px] sm:left-1/2 -ml-0.5 -z-10"></div>
-              <div className="flex sm:w-1/2 justify-start pl-8 sm:pl-12 order-2 ml-16 sm:ml-0">
-                <div className="bg-surface-dark p-5 rounded-xl border border-primary shadow-md max-w-[300px] w-full relative group cursor-pointer hover:bg-surface-border/50 transition-colors">
-                  <div className="absolute left-0 top-1/2 -mt-2 -ml-1.5 w-3 h-3 bg-surface-dark border-b border-l border-primary rotate-45 hidden sm:block group-hover:bg-surface-border/50 transition-colors"></div>
-                  <div className="absolute left-[-6px] top-1/2 -mt-2 w-3 h-3 bg-surface-dark border-b border-l border-primary rotate-45 block sm:hidden group-hover:bg-surface-border/50 transition-colors"></div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-white font-bold text-lg">OOP Basics</h4>
-                    <span className="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded">
-                      IN PROGRESS
-                    </span>
-                  </div>
-                  <p className="text-text-secondary text-sm mb-3">
-                    Master classes, objects, and inheritance.
-                  </p>
-                  <div className="w-full bg-surface-border rounded-full h-1.5">
-                    <div className="bg-primary h-1.5 rounded-full" style={{ width: '45%' }}></div>
-                  </div>
-                  <div className="mt-2 text-right text-xs text-text-secondary">
-                    45% Complete
+                <div className="mt-auto bg-white/5 border border-white/10 rounded-xl p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(37,123,244,0.2)' }}>
+                      <span className="material-symbols-outlined text-base" style={{ color: '#257bf4' }}>lightbulb</span>
+                    </div>
+                    <p className="text-slate-300 text-sm leading-relaxed">
+                      &quot;You&apos;re excelling in logic! Focus <span className="font-bold" style={{ color: '#257bf4' }}>15% more on Big O notation</span> and memory management to secure your A+ in the upcoming finals.&quot;
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="relative w-full flex items-center mb-12 z-10 opacity-70">
-              <div className="flex sm:w-1/2 justify-start sm:justify-end pr-8 sm:pr-12 order-2 sm:order-1 ml-16 sm:ml-0">
-                <div className="bg-background-dark p-4 rounded-xl border border-surface-border border-dashed max-w-[280px] w-full relative">
-                  <h4 className="text-text-secondary font-bold text-lg">Algorithms</h4>
-                  <p className="text-text-secondary/60 text-sm mt-1">
-                    Locked • Prerequisite needed
-                  </p>
+
+            <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
+              <div className="dash-surface p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Average Score</p>
+                  <h4 className="text-2xl font-bold text-white">88.5%</h4>
+                </div>
+                <div className="p-3 bg-blue-500/10 rounded-xl">
+                  <span className="material-symbols-outlined text-blue-500">percent</span>
                 </div>
               </div>
-              <div className="absolute left-[10px] sm:left-1/2 sm:-ml-[20px] w-[40px] h-[40px] rounded-full bg-surface-border flex items-center justify-center ring-4 ring-background-dark z-20">
-                <span className="material-symbols-outlined text-text-secondary text-xl">
-                  lock
-                </span>
-              </div>
-              <div className="hidden sm:block w-1/2 pl-12 order-2">
-                <span className="text-text-secondary text-sm font-mono opacity-30">
-                  UNIT 03
-                </span>
-              </div>
-            </div>
-            <div className="relative w-full flex items-center mb-12 z-10 opacity-50">
-              <div className="hidden sm:block w-1/2 pr-12 text-right order-1">
-                <span className="text-text-secondary text-sm font-mono opacity-30">
-                  UNIT 04
-                </span>
-              </div>
-              <div className="absolute left-[10px] sm:left-1/2 sm:-ml-[20px] w-[40px] h-[40px] rounded-full bg-surface-border flex items-center justify-center ring-4 ring-background-dark z-20">
-                <span className="material-symbols-outlined text-text-secondary text-xl">
-                  lock
-                </span>
-              </div>
-              <div className="flex sm:w-1/2 justify-start pl-8 sm:pl-12 order-2 ml-16 sm:ml-0">
-                <div className="bg-transparent p-4 rounded-xl border border-surface-border border-dashed max-w-[280px] w-full relative">
-                  <h4 className="text-text-secondary font-bold text-lg">System Design</h4>
-                  <p className="text-text-secondary/60 text-sm mt-1">Locked</p>
+              <div className="dash-surface p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Quizzes Completed</p>
+                  <h4 className="text-2xl font-bold text-white">42</h4>
+                </div>
+                <div className="p-3 bg-purple-500/10 rounded-xl">
+                  <span className="material-symbols-outlined text-purple-500">task_alt</span>
                 </div>
               </div>
-            </div>
-            <div className="relative w-full flex items-center z-10 opacity-30">
-              <div className="flex sm:w-1/2 justify-start sm:justify-end pr-8 sm:pr-12 order-2 sm:order-1 ml-16 sm:ml-0">
-                <div className="bg-transparent p-4 rounded-xl border border-surface-border border-dashed max-w-[280px] w-full relative">
-                  <h4 className="text-text-secondary font-bold text-lg">Capstone</h4>
+              <div className="dash-surface p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+                <div>
+                  <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Accuracy Rate</p>
+                  <h4 className="text-2xl font-bold text-white">91.2%</h4>
+                </div>
+                <div className="p-3 bg-teal-500/10 rounded-xl">
+                  <span className="material-symbols-outlined text-teal-500">ads_click</span>
                 </div>
               </div>
-              <div className="absolute left-[10px] sm:left-1/2 sm:-ml-[20px] w-[40px] h-[40px] rounded-full bg-surface-border flex items-center justify-center ring-4 ring-background-dark z-20">
-                <span className="material-symbols-outlined text-text-secondary text-xl">
-                  emoji_events
-                </span>
-              </div>
-              <div className="hidden sm:block w-1/2 pl-12 order-2"></div>
             </div>
           </div>
-          <div className="fixed bottom-6 right-6 lg:hidden z-50">
-            <button className="size-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl">smart_toy</span>
-            </button>
+
+          <div className="grid grid-cols-12 gap-6 mb-6">
+            <div className="col-span-12 lg:col-span-4 dash-surface p-6 rounded-2xl border border-slate-700">
+              <h3 className="text-lg font-bold text-white mb-6">Mastery Overview</h3>
+              <div className="flex flex-col items-center">
+                <div className="relative w-44 h-44 rounded-full flex items-center justify-center donut-gradient">
+                  <div className="absolute inset-4 dash-surface rounded-full flex flex-col items-center justify-center">
+                    <span className="text-4xl font-black text-white">84%</span>
+                    <span className="text-[10px] uppercase tracking-widest text-slate-500">Curriculum</span>
+                  </div>
+                </div>
+                <div className="mt-6 w-full space-y-3">
+                  <div className="flex justify-between items-center text-sm text-slate-300">
+                    <span className="text-slate-500">Learning Hours</span>
+                    <span className="font-bold text-white">124h</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-slate-300">
+                    <span className="text-slate-500">Active Days</span>
+                    <span className="font-bold" style={{ color: '#257bf4' }}>18 Day Streak</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-span-12 lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="dash-surface p-6 rounded-2xl border border-slate-700">
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="material-symbols-outlined text-green-500">verified</span>
+                  <h3 className="text-lg font-bold text-white">Top Strengths</h3>
+                </div>
+                <ul className="space-y-4">
+                  <li className="flex items-center justify-between p-3 rounded-xl bg-green-500/5 border border-green-500/10">
+                    <span className="text-sm font-medium text-slate-200">UI/UX Design</span>
+                    <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded">95% Mastery</span>
+                  </li>
+                  <li className="flex items-center justify-between p-3 rounded-xl bg-green-500/5 border border-green-500/10">
+                    <span className="text-sm font-medium text-slate-200">SQL &amp; Databases</span>
+                    <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded">88% Mastery</span>
+                  </li>
+                  <li className="flex items-center justify-between p-3 rounded-xl bg-green-500/5 border border-green-500/10">
+                    <span className="text-sm font-medium text-slate-200">Data Structures</span>
+                    <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded">92% Mastery</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="dash-surface p-6 rounded-2xl border border-slate-700">
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="material-symbols-outlined text-orange-500">trending_up</span>
+                  <h3 className="text-lg font-bold text-white">Areas for Improvement</h3>
+                </div>
+                <ul className="space-y-4">
+                  <li className="flex items-center justify-between p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
+                    <span className="text-sm font-medium text-slate-200">Big O Notation</span>
+                    <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded">Focus Needed</span>
+                  </li>
+                  <li className="flex items-center justify-between p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
+                    <span className="text-sm font-medium text-slate-200">Memory Management</span>
+                    <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded">Review Required</span>
+                  </li>
+                  <li className="flex items-center justify-between p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
+                    <span className="text-sm font-medium text-slate-200">Network Protocols</span>
+                    <span className="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded">Practice More</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
+
+          <footer className="py-6 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-500 text-sm">
+            <p>© 2024 CS Analytics Platform. Empowering code learners.</p>
+            <div className="flex gap-6">
+              <a className="hover:opacity-80 transition-opacity" href="#">Documentation</a>
+              <a className="hover:opacity-80 transition-opacity" href="#">Privacy Policy</a>
+              <a className="hover:opacity-80 transition-opacity" href="#">API Status</a>
+            </div>
+          </footer>
         </div>
       </main>
     </div>
@@ -168,4 +199,3 @@ function Dash() {
 }
 
 export default Dash
-

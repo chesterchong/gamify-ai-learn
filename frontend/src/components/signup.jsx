@@ -169,23 +169,17 @@ function Signup() {
 
   useEffect(() => {
     let isMounted = true
+    let hasSynced = false
 
-    const syncSupabaseSession = async () => {
-      const { data, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError) {
-        if (isMounted) {
-          setError('GitHub login failed. Please try again.')
-        }
-        return
+    const syncSupabaseSession = async (session) => {
+      const accessToken = session?.access_token
+      if (!accessToken || hasSynced) return
+
+      hasSynced = true
+      if (isMounted) {
+        setIsSubmitting(true)
+        setError('')
       }
-
-      const accessToken = data.session?.access_token
-      if (!accessToken) {
-        return
-      }
-
-      setIsSubmitting(true)
-      setError('')
 
       try {
         const response = await fetch(`${apiBaseUrl}/api/auth/supabase`, {
@@ -196,15 +190,17 @@ function Signup() {
         })
 
         if (!response.ok) {
+          hasSynced = false
           const payload = await response.json().catch(() => ({}))
-          throw new Error(payload.error || 'GitHub login failed')
+          throw new Error(payload.error || 'OAuth login failed')
         }
 
         await response.json()
         if (isMounted) setAuthSuccess(true)
       } catch (err) {
         if (isMounted) {
-          setError(err.message || 'GitHub login failed')
+          setError(err.message || 'OAuth login failed')
+          hasSynced = false
         }
       } finally {
         if (isMounted) {
@@ -215,10 +211,24 @@ function Signup() {
       }
     }
 
-    syncSupabaseSession()
+    const runSyncFromSession = async () => {
+      const { data, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !isMounted) return
+      if (data.session) syncSupabaseSession(data.session)
+    }
+
+    runSyncFromSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
+        syncSupabaseSession(session)
+      }
+    })
 
     return () => {
       isMounted = false
+      subscription?.unsubscribe()
     }
   }, [apiBaseUrl, navigate])
 
