@@ -67,6 +67,13 @@ app.get('/health/db', async (req, res) => {
 
 app.use('/api/auth', authRouter)
 
+// Pre-warm Supabase JWKS so first OAuth login doesn't wait on remote fetch
+const supabaseUrl = process.env.SUPABASE_URL
+if (supabaseUrl) {
+  const jwksUrl = `${supabaseUrl.replace(/\/+$/, '')}/auth/v1/.well-known/jwks.json`
+  fetch(jwksUrl).catch(() => {})
+}
+
 app.use((err, req, res, next) => {
   console.error(err)
   res.status(500).json({

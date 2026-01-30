@@ -40,6 +40,10 @@ const toSafeUser = (user) => ({
   level: user.level,
   streakCount: user.streakCount,
   lastActiveDate: user.lastActiveDate,
+  fullName: user.fullName,
+  username: user.username,
+  professionalRole: user.professionalRole,
+  profilePhotoUrl: user.profilePhotoUrl,
 })
 
 router.post('/register', async (req, res, next) => {
@@ -184,6 +188,70 @@ router.get('/me', requireAuth, async (req, res, next) => {
 
     return res.json({ user: toSafeUser(user) })
   } catch (error) {
+    return next(error)
+  }
+})
+
+router.put('/profile', requireAuth, async (req, res, next) => {
+  try {
+    const { fullName, username, professionalRole, profilePhotoUrl, password } = req.body
+
+    // Check if username is being changed and if it's already taken
+    if (username !== undefined && username !== null) {
+      const trimmedUsername = typeof username === 'string' ? username.trim() : ''
+      if (trimmedUsername) {
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            username: trimmedUsername,
+            id: { not: req.user.id },
+          },
+        })
+        if (existingUser) {
+          return res.status(409).json({ error: 'Username already taken' })
+        }
+      }
+    }
+
+    // Build update data object
+    const updateData = {}
+    if (fullName !== undefined) {
+      updateData.fullName = typeof fullName === 'string' ? fullName.trim() || null : null
+    }
+    if (username !== undefined) {
+      updateData.username = typeof username === 'string' ? username.trim() || null : null
+    }
+    if (professionalRole !== undefined) {
+      updateData.professionalRole = typeof professionalRole === 'string' ? professionalRole.trim() || null : null
+    }
+    if (profilePhotoUrl !== undefined) {
+      updateData.profilePhotoUrl = typeof profilePhotoUrl === 'string' ? profilePhotoUrl.trim() || null : null
+    }
+    if (password !== undefined && password !== null && password !== '') {
+      const passwordStr = typeof password === 'string' ? password : ''
+      if (passwordStr.length < PASSWORD_MIN_LENGTH) {
+        return res.status(400).json({
+          error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+        })
+      }
+      updateData.passwordHash = await bcrypt.hash(passwordStr, 10)
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: updateData,
+    })
+
+    return res.json({ user: toSafeUser(user) })
+  } catch (error) {
+    console.error('[auth/profile] Error:', error?.message || error)
+    console.error('[auth/profile] Stack:', error?.stack)
+    // Check if it's a Prisma schema mismatch error
+    if (error?.message?.includes('Unknown argument') || error?.message?.includes('Unknown field')) {
+      return res.status(500).json({
+        error: 'Database schema mismatch. Please run migrations: npx prisma migrate dev',
+        detail: process.env.DEBUG_ERRORS === 'true' ? error.message : undefined,
+      })
+    }
     return next(error)
   }
 })

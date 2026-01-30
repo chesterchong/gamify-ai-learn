@@ -234,7 +234,8 @@ function Signup() {
 
   useEffect(() => {
     if (!authSuccess) return
-    const t = setTimeout(() => navigate('/dash'), 1800)
+    // Short delay so user sees success state, then redirect (was 1800ms)
+    const t = setTimeout(() => navigate('/dash'), 400)
     return () => clearTimeout(t)
   }, [authSuccess, navigate])
 

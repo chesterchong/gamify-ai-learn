@@ -10,14 +10,18 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  passwordHash   String
-  role           String   @default("learner")
-  xp             Int      @default(0)
-  level          Int      @default(1)
-  streakCount    Int      @default(0)
-  lastActiveDate DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String
+  role             String   @default("learner")
+  xp               Int      @default(0)
+  level            Int      @default(1)
+  streakCount      Int      @default(0)
+  lastActiveDate   DateTime?
+  fullName         String?
+  username         String?  @unique
+  professionalRole String?
+  profilePhotoUrl  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
