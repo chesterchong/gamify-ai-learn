@@ -127,16 +127,26 @@ router.post('/supabase', async (req, res, next) => {
 
     const { supabaseJwks, supabaseIssuer, supabaseAudience } =
       getSupabaseVerifier()
-    const { payload } = await jwtVerify(accessToken, supabaseJwks, {
-      issuer: supabaseIssuer,
-      audience: supabaseAudience,
-    })
+    let payload
+    try {
+      const result = await jwtVerify(accessToken, supabaseJwks, {
+        issuer: supabaseIssuer,
+        audience: supabaseAudience,
+      })
+      payload = result.payload
+    } catch (jwtError) {
+      console.error('[auth/supabase] JWT verification failed:', jwtError?.message || jwtError)
+      return res.status(401).json({
+        error: 'Invalid or expired token',
+        ...(process.env.DEBUG_ERRORS === 'true' && { detail: jwtError?.message }),
+      })
+    }
 
     const email =
       typeof payload.email === 'string' ? payload.email.toLowerCase() : ''
 
     if (!email) {
-      return res.status(400).json({ error: 'Email not available from GitHub' })
+      return res.status(400).json({ error: 'Email not available from OAuth provider' })
     }
 
     let user = await prisma.user.findUnique({ where: { email } })
@@ -157,6 +167,7 @@ router.post('/supabase', async (req, res, next) => {
     req.session.role = user.role
     return res.json({ user: toSafeUser(user) })
   } catch (error) {
+    console.error('[auth/supabase]', error?.message || error)
     return next(error)
   }
 })
