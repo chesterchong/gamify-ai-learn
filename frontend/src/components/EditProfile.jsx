@@ -1,7 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import Layout from './Layout.jsx'
-import supabase from '../lib/supabase'
 
 function EditProfile() {
   const navigate = useNavigate()
@@ -38,10 +36,13 @@ function EditProfile() {
 
         const data = await response.json()
         setUser(data.user)
+        
+        // Initialize form data - keep inputs empty, show current values as placeholders
+        // For first-time users, professionalRole will be empty/null, so we'll show "student" as placeholder
         setFormData({
-          fullName: data.user.fullName || '',
-          username: data.user.username || '',
-          professionalRole: data.user.professionalRole || '',
+          fullName: '',
+          username: '',
+          professionalRole: '', // Keep empty, show current value or "student" as placeholder
           email: data.user.email || '',
           password: '',
           profilePhotoUrl: data.user.profilePhotoUrl || '',
@@ -76,53 +77,27 @@ function EditProfile() {
     setError('')
 
     try {
-      // Get current user's email for folder structure
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-      if (!supabaseUser?.email) {
-        throw new Error('User not authenticated')
+      // Upload photo via backend endpoint (handles Supabase storage authentication)
+      const formData = new FormData()
+      formData.append('photo', file)
+
+      const response = await fetch(`${apiBaseUrl}/api/auth/profile/photo`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to upload photo')
       }
 
-      // Create a unique filename
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${supabaseUser.email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${fileExt}`
-      const filePath = `profile-photos/${fileName}`
-
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-        })
-
-      if (uploadError) {
-        // If bucket doesn't exist, try 'profile-photos' bucket
-        const { error: uploadError2 } = await supabase.storage
-          .from('profile-photos')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: true,
-          })
-
-        if (uploadError2) {
-          throw uploadError2
-        }
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath)
-
-      const publicUrl = urlData?.publicUrl || supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(filePath).data?.publicUrl
-
-      if (!publicUrl) {
+      const data = await response.json()
+      if (!data.url) {
         throw new Error('Failed to get image URL')
       }
 
-      setFormData((prev) => ({ ...prev, profilePhotoUrl: publicUrl }))
+      setFormData((prev) => ({ ...prev, profilePhotoUrl: data.url }))
     } catch (err) {
       console.error('Photo upload error:', err)
       setError(err.message || 'Failed to upload photo')
@@ -145,11 +120,25 @@ function EditProfile() {
     setSuccess(false)
 
     try {
-      const updatePayload = {
-        fullName: formData.fullName.trim() || null,
-        username: formData.username.trim() || null,
-        professionalRole: formData.professionalRole.trim() || null,
-        profilePhotoUrl: formData.profilePhotoUrl || null,
+      // Only update fields that have been changed (non-empty)
+      // If empty, preserve current values by not including them in the payload
+      // Exception: For first-time users, set professionalRole to "student" if empty
+      const updatePayload = {}
+      
+      if (formData.fullName.trim()) {
+        updatePayload.fullName = formData.fullName.trim()
+      }
+      if (formData.username.trim()) {
+        updatePayload.username = formData.username.trim()
+      }
+      if (formData.professionalRole.trim()) {
+        updatePayload.professionalRole = formData.professionalRole.trim()
+      } else if (!user?.professionalRole) {
+        // If field is empty and user doesn't have a role yet (first-time user), set to "student"
+        updatePayload.professionalRole = 'student'
+      }
+      if (formData.profilePhotoUrl) {
+        updatePayload.profilePhotoUrl = formData.profilePhotoUrl
       }
 
       // Only include password if it's been changed (not empty)
@@ -191,19 +180,17 @@ function EditProfile() {
 
   if (loading) {
     return (
-      <Layout title="Edit Profile">
-        <div className="min-h-full w-full bg-[#0b111b] text-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-            <p className="text-slate-400">Loading profile...</p>
-          </div>
+      <div className="min-h-screen w-full bg-[#0b111b] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+          <p className="text-slate-400">Loading profile...</p>
         </div>
-      </Layout>
+      </div>
     )
   }
 
   return (
-    <Layout title="Edit Profile">
+    <div className="min-h-screen w-full bg-[#0b111b] text-white">
       <style>{`
         ::-webkit-scrollbar {
           width: 8px;
@@ -219,8 +206,13 @@ function EditProfile() {
         ::-webkit-scrollbar-thumb:hover {
           background: #3c4b5d;
         }
+        input::placeholder {
+          user-select: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+        }
       `}</style>
-      <div className="min-h-full w-full bg-[#0b111b] text-white">
         <div className="max-w-5xl mx-auto px-6 md:px-10 py-10">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
@@ -305,7 +297,7 @@ function EditProfile() {
                       value={formData.fullName}
                       onChange={handleInputChange}
                       className="h-11 rounded-lg bg-[#162235] border border-[#23354d] px-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                      placeholder="Enter full name"
+                      placeholder={user?.fullName || (user?.email ? user.email.split('@')[0] : 'Enter full name')}
                     />
                     <span className="text-[11px] text-slate-500">
                       Enter your full name
@@ -320,7 +312,7 @@ function EditProfile() {
                       value={formData.username}
                       onChange={handleInputChange}
                       className="h-11 rounded-lg bg-[#162235] border border-[#23354d] px-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                      placeholder="Enter username"
+                      placeholder={user?.username || (user?.email ? user.email.split('@')[0] : 'Enter username')}
                     />
                     <span className="text-[11px] text-slate-500">
                       Choose a unique username
@@ -335,10 +327,11 @@ function EditProfile() {
                       value={formData.professionalRole}
                       onChange={handleInputChange}
                       className="h-11 rounded-lg bg-[#162235] border border-[#23354d] px-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                      placeholder="e.g., Student, Developer"
+                      placeholder={user?.professionalRole || 'student'}
                     />
                     <span className="text-[11px] text-slate-500">
-                      e.g., Student, Developer, Designer
+                      Enter your role
+
                     </span>
                   </label>
                 </div>
@@ -391,7 +384,7 @@ function EditProfile() {
                         value={formData.password}
                         onChange={handleInputChange}
                         className="flex-1 h-11 rounded-lg bg-[#162235] border border-[#23354d] px-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                        placeholder="Enter new password (leave empty to keep current)"
+                        placeholder="Enter new password"
                       />
                     </div>
                     <span className="text-[11px] text-slate-500">
@@ -432,7 +425,6 @@ function EditProfile() {
           </form>
         </div>
       </div>
-    </Layout>
   )
 }
 

@@ -3,12 +3,50 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+/**
+ * Converts Supabase pooler URL to direct connection URL for migrations.
+ * Migrations should use the direct connection (port 5432) instead of the pooler (port 6543)
+ * to avoid timeouts and hanging issues.
+ */
+function getDirectDatabaseUrl() {
+  const url = process.env["DIRECT_DATABASE_URL"] || process.env["DATABASE_URL"];
+  
+  if (!url) {
+    throw new Error("DATABASE_URL or DIRECT_DATABASE_URL environment variable is required");
+  }
+
+  // If DIRECT_DATABASE_URL is explicitly set, use it
+  if (process.env["DIRECT_DATABASE_URL"]) {
+    return url;
+  }
+
+  // Otherwise, convert pooler URL to direct connection URL
+  try {
+    const dbUrl = new URL(url);
+    
+    // Replace pooler hostname with direct connection hostname
+    // e.g., aws-1-ap-south-1.pooler.supabase.com -> aws-1-ap-south-1.pooler.supabase.com
+    // and change port from 6543 to 5432
+    if (dbUrl.hostname.includes("pooler.supabase.com")) {
+      dbUrl.port = "5432";
+      // Optionally replace pooler with db if your Supabase setup uses db. prefix
+      // dbUrl.hostname = dbUrl.hostname.replace("pooler.supabase.com", "db.supabase.com");
+    }
+    
+    return dbUrl.toString();
+  } catch (error) {
+    // If URL parsing fails, return original URL
+    console.warn("Failed to parse DATABASE_URL, using as-is:", error);
+    return url;
+  }
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: getDirectDatabaseUrl(),
   },
 });

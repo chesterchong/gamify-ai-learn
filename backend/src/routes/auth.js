@@ -2,6 +2,8 @@ import bcrypt from 'bcrypt'
 import crypto from 'node:crypto'
 import { Router } from 'express'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
+import multer from 'multer'
+import { createClient } from '@supabase/supabase-js'
 import prisma from '../db/prisma.js'
 import requireAuth from '../middleware/requireAuth.js'
 
@@ -264,6 +266,106 @@ router.post('/logout', (req, res, next) => {
     res.clearCookie('connect.sid')
     return res.json({ ok: true })
   })
+})
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'), false)
+    }
+  },
+})
+
+// Photo upload endpoint
+router.post('/profile/photo', requireAuth, upload.single('photo'), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({
+        error: 'Supabase configuration missing',
+        detail: process.env.DEBUG_ERRORS === 'true' ? 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY are required' : undefined,
+      })
+    }
+
+    // Get user email for file naming
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { email: true },
+    })
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Create Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Create a unique filename
+    const fileExt = req.file.originalname.split('.').pop() || 'jpg'
+    const fileName = `${user.email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${fileExt}`
+    const filePath = `profile-photos/${fileName}`
+
+    // Upload to Supabase Storage
+    let uploadError = null
+    let bucketName = 'avatars'
+
+    // Try 'avatars' bucket first
+    const { error: error1 } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, req.file.buffer, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: req.file.mimetype,
+      })
+
+    if (error1) {
+      // Try 'profile-photos' bucket
+      bucketName = 'profile-photos'
+      const { error: error2 } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, req.file.buffer, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: req.file.mimetype,
+        })
+      uploadError = error2
+    }
+
+    if (uploadError) {
+      console.error('[auth/profile/photo] Upload error:', uploadError)
+      return res.status(500).json({
+        error: 'Failed to upload photo',
+        detail: process.env.DEBUG_ERRORS === 'true' ? uploadError.message : undefined,
+      })
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath)
+
+    if (!urlData?.publicUrl) {
+      return res.status(500).json({ error: 'Failed to get image URL' })
+    }
+
+    return res.json({ url: urlData.publicUrl })
+  } catch (error) {
+    console.error('[auth/profile/photo] Error:', error?.message || error)
+    return next(error)
+  }
 })
 
 export default router

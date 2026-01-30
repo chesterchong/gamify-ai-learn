@@ -1,11 +1,78 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import ProfileShareModal from './ProfileShareModal.jsx'
 import TermsThemeStyles from './TermsThemeStyles'
 
 function Profile() {
   const [isShareOpen, setIsShareOpen] = useState(false)
-  const profileShareLink = 'sample.com/u/chester'
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
+          credentials: 'include',
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data')
+        }
+
+        const data = await response.json()
+        setUser(data.user)
+      } catch (err) {
+        setError(err.message || 'Failed to load profile data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [apiBaseUrl])
+
+  // Generate profile share link from username or email
+  const profileShareLink = user?.username 
+    ? `sample.com/u/${user.username}` 
+    : user?.email 
+    ? `sample.com/u/${user.email.split('@')[0]}` 
+    : 'sample.com/u/user'
+
+  // Calculate XP progress (example: 4500/5000 = 90%)
+  const currentXP = user?.xp || 0
+  const xpForNextLevel = 5000 // This could be calculated based on level
+  const xpProgress = Math.min((currentXP / xpForNextLevel) * 100, 100)
+  const xpNeeded = Math.max(xpForNextLevel - currentXP, 0)
+
+  if (loading) {
+    return (
+      <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+          <p className="text-slate-400">Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <Link to="/" className="text-primary hover:text-blue-400">
+            Go to Home
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   return (
     <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen">
@@ -43,46 +110,67 @@ function Profile() {
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-white to-blue-200 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-200"></div>
             <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1 bg-white/20 backdrop-blur-sm ring-4 ring-white/30">
-              <img
-                alt="Profile picture of Chester"
-                className="w-full h-full rounded-full object-cover border-4 border-primary"
-                src="https://lh3.googleusercontent.com/a/ACg8ocLyRHQvwCqfDkEB8QjBR1lbWwKLf6LC773bpIZzMD1HvKM4yFTy=s432-c-"
-              />
+              {user.profilePhotoUrl ? (
+                <img
+                  alt={`Profile picture of ${user.fullName || user.email}`}
+                  className="w-full h-full rounded-full object-cover border-4 border-primary"
+                  src={user.profilePhotoUrl}
+                  onError={(e) => {
+                    // Hide image and show fallback icon if image fails to load
+                    e.target.style.display = 'none'
+                    const fallback = e.target.parentElement.querySelector('.profile-photo-fallback')
+                    if (fallback) {
+                      fallback.classList.remove('hidden')
+                    }
+                  }}
+                />
+              ) : null}
+              <div className={`w-full h-full rounded-full bg-gradient-to-br from-primary/20 to-blue-600/20 flex items-center justify-center border-4 border-primary ${user.profilePhotoUrl ? 'hidden profile-photo-fallback' : ''}`}>
+                <span className="material-symbols-outlined text-4xl md:text-5xl text-white/80">
+                  account_circle
+                </span>
+              </div>
             </div>
             <div className="absolute bottom-0 right-0 bg-yellow-400 text-black font-bold text-xs px-2 py-1 rounded-full border-2 border-[#0b5cb5]">
-              LVL 12
+              LVL {user.level || 1}
             </div>
           </div>
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left text-white">
             <div className="flex flex-col md:flex-row items-center gap-3 mb-1">
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Chester
+                {user.fullName || user.email?.split('@')[0] || 'User'}
               </h1>
-              <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full border border-white/10 backdrop-blur-md">
-                @chester
-              </span>
+              {user.username && (
+                <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full border border-white/10 backdrop-blur-md">
+                  @{user.username}
+                </span>
+              )}
             </div>
-            <p className="text-blue-100 text-lg font-medium mb-6">Student</p>
+            {user.professionalRole && (
+              <p className="text-blue-100 text-lg font-medium mb-6">{user.professionalRole}</p>
+            )}
             <div className="w-full max-w-lg mb-6">
               <div className="flex justify-between text-sm font-medium text-blue-100 mb-2">
                 <span>Mastery Progress</span>
-                <span>4,500 / 5,000 XP</span>
+                <span>{currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP</span>
               </div>
               <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden backdrop-blur-sm">
                 <div
                   className="h-full bg-white rounded-full relative overflow-hidden"
-                  style={{ width: '90%' }}
+                  style={{ width: `${xpProgress}%` }}
                 >
                   <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
                 </div>
               </div>
-              <p className="text-xs text-blue-200 mt-2 text-right">
-                500 XP to Level 13 (Veteran)
-              </p>
+              {xpNeeded > 0 && (
+                <p className="text-xs text-blue-200 mt-2 text-right">
+                  {xpNeeded.toLocaleString()} XP to Level {user.level + 1}
+                </p>
+              )}
             </div>
             <div className="flex gap-3">
               <Link
-                className="flex items-center gap-2 px-5 py-2 bg-white text-primary rounded-lg font-bold text-sm hover:bg-blue-50 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-5 py-2 bg-black/20 text-white rounded-lg font-bold text-sm hover:bg-black/30 transition-colors backdrop-blur-md border border-white/10"
                 to="/profile/edit"
               >
                 <span className="material-symbols-outlined text-[20px]">
@@ -117,7 +205,7 @@ function Profile() {
                 Current Streak
               </p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                45 Days
+                {user.streakCount || 0} {user.streakCount === 1 ? 'Day' : 'Days'}
               </p>
             </div>
           </div>

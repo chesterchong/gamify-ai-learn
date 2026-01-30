@@ -25,3 +25,13 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
+
+// Session table created by connect-pg-simple for Express sessions
+model Session {
+  sid    String   @id
+  sess   Json     @db.JsonB
+  expire DateTime @db.Timestamptz(6)
+
+  @@index([expire])
+  @@map("session")
+}

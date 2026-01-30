@@ -4,11 +4,24 @@ This guide explains how to set up Supabase Storage for profile photo uploads.
 
 ## Steps
 
-1. **Go to your Supabase Dashboard**
+1. **Get Your Supabase API Keys**
+   - Go to your Supabase Dashboard: https://app.supabase.com
+   - Select your project
+   - Go to **Settings** → **API** (in the left sidebar)
+   - You'll see two important keys:
+     - **`anon` `public` key**: This is your anon/public key (safe for frontend use)
+     - **`service_role` `secret` key**: This is your service role key (⚠️ **KEEP SECRET** - only use in backend)
+   - Copy the **Service Role Key** and add it to your backend `.env` file:
+     ```env
+     SUPABASE_SERVICE_ROLE_KEY="your-service-role-key-here"
+     ```
+   - **Important**: Never expose the service role key in frontend code or commit it to git!
+
+2. **Go to your Supabase Dashboard**
    - Navigate to: https://app.supabase.com
    - Select your project
 
-2. **Create a Storage Bucket**
+3. **Create a Storage Bucket**
    - Go to **Storage** in the left sidebar
    - Click **New bucket**
    - Name it either:
@@ -17,7 +30,7 @@ This guide explains how to set up Supabase Storage for profile photo uploads.
    - Make it **Public** (so profile photos can be accessed via URL)
    - Click **Create bucket**
 
-3. **Set Bucket Policies (Required)**
+4. **Set Bucket Policies (Required)**
 
    **Method 1: Using SQL Editor (Recommended)**
    - Go to **SQL Editor** in the left sidebar
@@ -58,7 +71,7 @@ This guide explains how to set up Supabase Storage for profile photo uploads.
 
    **Note:** Replace `'avatars'` with `'profile-photos'` if you named your bucket differently.
 
-4. **Verify Setup**
+5. **Verify Setup**
    - The EditProfile component will automatically try both `avatars` and `profile-photos` buckets
    - If upload fails, check the browser console for error messages
 
