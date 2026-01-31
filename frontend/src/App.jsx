@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
-import Achievement from './components/Achievement.jsx'
 import AppLayout from './components/AppLayout.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import EditProfile from './components/EditProfile.jsx'
@@ -42,14 +41,6 @@ function App() {
           element={
             <ProtectedRoute>
               <Learn />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/achievement"
-          element={
-            <ProtectedRoute>
-              <Achievement />
             </ProtectedRoute>
           }
         />

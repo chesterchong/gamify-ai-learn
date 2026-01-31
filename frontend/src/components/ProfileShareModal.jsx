@@ -136,16 +136,6 @@ function ProfileShareModal({ isOpen, onClose, link }) {
               </button>
             </div>
           </div>
-
-          <div className="flex justify-end">
-            <button
-              className="text-slate-400 hover:text-white transition-colors"
-              onClick={onClose}
-              type="button"
-            >
-              Close
-            </button>
-          </div>
         </div>
       </div>
     </div>

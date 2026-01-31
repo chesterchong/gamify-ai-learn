@@ -48,15 +48,6 @@ function Layout({ title, children, mainClassName = '' }) {
                 </span>
                 <span className="text-sm font-medium">Learning Path</span>
               </NavLink>
-              <NavLink className={navLinkClass} to="/achievement">
-                <span
-                  className="material-symbols-outlined text-2xl"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  emoji_events
-                </span>
-                <span className="text-sm font-medium">Achievements</span>
-              </NavLink>
               <NavLink className={navLinkClass} to="/quiz">
                 <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">
                   quiz
