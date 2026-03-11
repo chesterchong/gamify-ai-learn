@@ -9,7 +9,12 @@
     "start": "node src/server.js",
     "prisma": "prisma",
     "postinstall": "prisma generate",
-    "build": "prisma generate"
+    "build": "prisma generate",
+    "seed": "node prisma/seed.js",
+    "update-dsa-lock": "node prisma/update-dsa-lock.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "keywords": [],
   "author": "",

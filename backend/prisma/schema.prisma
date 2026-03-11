@@ -24,6 +24,102 @@ model User {
   profilePhotoUrl  String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  // Relations
+  moduleProgress   UserModuleProgress[]
+  lessonProgress   UserLessonProgress[]
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  code        String   @unique // e.g., "BACS1013"
+  title       String   // e.g., "Problem Solving & Programming"
+  description String?  @db.Text
+  xpReward    Int      @default(500)
+  estimatedHrs Int     @default(20)
+  difficulty  String   // e.g., "Beginner", "Intermediate", "Hard"
+  avgScore    Int      @default(0)
+  aiInsights  String?  @db.Text
+  category    String?  // e.g., "Computer Science", "Web Development"
+  year        Int?     // e.g., 1, 2
+  
+  // Prerequisite logic
+  prerequisiteId String?
+  prerequisite   Course?   @relation("CoursePrerequisites", fields: [prerequisiteId], references: [id])
+  requiredFor    Course[]  @relation("CoursePrerequisites")
+
+  modules     Module[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  order       Int      // 1, 2, 3...
+  title       String   // e.g., "Introduction to Complexity"
+  description String?  @db.Text
+  imageUrl    String?
+  iconName    String?  // Material icon name
+  
+  // Roadmap data
+  numLessons  Int      @default(0)
+  numProblems Int      @default(0)
+  
+  lessons     Lesson[]
+  userProgress UserModuleProgress[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  
+  order       Int
+  title       String   // e.g., "Static vs Dynamic Arrays"
+  durationMin Int      @default(10)
+  type        String   @default("reading") // "reading", "video", "quiz", "coding"
+  content     String?  @db.Text
+  
+  userProgress UserLessonProgress[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserModuleProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  
+  status      String   @default("available") // "available", "in-progress", "completed", "locked"
+  progress    Int      @default(0) // 0-100
+  grade       String?  // e.g., "A+"
+  
+  completedAt DateTime?
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, moduleId])
+}
+
+model UserLessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  
+  @@unique([userId, lessonId])
 }
 
 // Session table created by connect-pg-simple for Express sessions

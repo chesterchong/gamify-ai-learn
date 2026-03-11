@@ -1,35 +1,74 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function LearningPathOverview({ onOpenModule }) {
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchInput, setSearchInput] = useState('')
   const [difficultyFilter, setDifficultyFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/learning/courses`, {
+          credentials: 'include',
+        })
+        if (!response.ok) {
+          throw new Error('Failed to fetch courses')
+        }
+        const data = await response.json()
+        setCourses(data)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [apiBaseUrl])
+
   const normalizedQuery = searchInput.trim().toLowerCase()
-  const matchesQuery = (text) =>
-    !normalizedQuery || text.toLowerCase().includes(normalizedQuery)
-  const matchesDifficulty = (difficulty) =>
-    difficultyFilter === 'all' || difficultyFilter === difficulty
-  const matchesStatus = (status) =>
-    statusFilter === 'all' || statusFilter === status
-  const matchesModuleOne = matchesQuery(
-    'bacs1013 problem solving programming in progress intermediate 20 hrs 85',
-  ) && matchesDifficulty('beginner') && matchesStatus('in-progress')
-  const matchesModuleTwo = matchesQuery(
-    'bait1023 web design development available beginner 24 hrs 92',
-  ) && matchesDifficulty('beginner') && matchesStatus('available')
-  const matchesModuleThree = matchesQuery(
-    'bacs2023 object oriented programming locked hard 30 hrs 76',
-  ) && matchesDifficulty('intermediate') && matchesStatus('locked')
-  const matchesModuleFour = matchesQuery(
-    'bacs2063 data structures and algorithms locked hard 40 hrs 60',
-  ) && matchesDifficulty('hard') && matchesStatus('locked')
-  const hasMatches =
-    matchesModuleOne ||
-    matchesModuleTwo ||
-    matchesModuleThree ||
-    matchesModuleFour
+  
+  const filteredCourses = courses.filter(course => {
+    const matchesQuery = !normalizedQuery || 
+      course.title.toLowerCase().includes(normalizedQuery) || 
+      course.code.toLowerCase().includes(normalizedQuery)
+    
+    const matchesDifficulty = difficultyFilter === 'all' || 
+      course.difficulty.toLowerCase() === difficultyFilter.toLowerCase()
+    
+    const matchesStatus = statusFilter === 'all' || 
+      course.status.toLowerCase() === statusFilter.toLowerCase()
+
+    return matchesQuery && matchesDifficulty && matchesStatus
+  })
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-400 mb-4">Error: {error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="text-primary hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="relative">
@@ -188,51 +227,62 @@ function LearningPathOverview({ onOpenModule }) {
           </header>
 
           <div className="space-y-6 max-w-4xl">
-            {matchesModuleOne ? (
+            {filteredCourses.map((course) => (
               <div
-                className="group relative bg-white dark:bg-[#161b2a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl shadow-primary/5 transition-all hover:translate-x-1"
-                onClick={() => onOpenModule?.()}
+                key={course.id}
+                className={`group relative bg-white dark:bg-[#161b2a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all hover:translate-x-1 ${
+                  course.status === 'locked' ? 'opacity-60 grayscale-[0.8]' : 'shadow-xl shadow-primary/5'
+                }`}
+                onClick={() => course.status !== 'locked' && onOpenModule?.(course.id)}
                 role="button"
                 tabIndex={0}
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-primary font-bold tracking-tighter">
-                      BACS1013
+                      <span className={`text-xs font-bold tracking-tighter ${course.status === 'locked' ? 'text-slate-400' : 'text-primary'}`}>
+                        {course.code}
                       </span>
-                      <div className="relative inline-block group">
-                        <span className="bg-blue-500/10 text-blue-500 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-help">
-                          <span className="material-symbols-outlined text-xs">
-                            psychology
+                      {course.aiInsights && (
+                        <div className="relative inline-block group">
+                          <span className="bg-blue-500/10 text-blue-500 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-help">
+                            <span className="material-symbols-outlined text-xs">
+                              psychology
+                            </span>
+                            AI INSIGHTS
                           </span>
-                          AI INSIGHTS
-                        </span>
-                        <div className="tooltip-box absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-xl z-10 text-center">
-                          Master this for FAANG interviews. Data structures are
-                          60% of technical screens.
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                          <div className="tooltip-box absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-xl z-10 text-center">
+                            {course.aiInsights}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
-                    <h3 className="text-xl font-bold flex items-center gap-3 text-[#111418] dark:text-white">
-                      Problem Solving &amp; Programming
-                      <span className="flex items-center gap-1 text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">
+                    <h3 className={`text-xl font-bold flex items-center gap-3 ${course.status === 'locked' ? 'text-slate-400' : 'text-[#111418] dark:text-white'}`}>
+                      {course.title}
+                      <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${course.status === 'locked' ? 'text-slate-400 bg-slate-400/10' : 'text-yellow-500 bg-yellow-500/10'}`}>
                         <span className="material-symbols-outlined text-[14px]">
                           bolt
                         </span>
-                        500 XP
+                        {course.xpReward} XP
                       </span>
                     </h3>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 uppercase">
-                      <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                      In Progress
+                    <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase ${
+                      course.status === 'in-progress' ? 'text-emerald-500' : 
+                      course.status === 'available' ? 'text-blue-500' : 
+                      'text-slate-400'
+                    }`}>
+                      {course.status === 'in-progress' && <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>}
+                      {course.status === 'locked' && <span className="material-symbols-outlined text-sm">lock_clock</span>}
+                      {course.status.replace('-', ' ')}
                     </span>
-                    <span className="text-[10px] text-slate-400">
-                      65% Completed
-                    </span>
+                    {course.status === 'in-progress' && (
+                      <span className="text-[10px] text-slate-400">
+                        {course.progressPercent}% Completed
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 mb-6">
@@ -241,10 +291,10 @@ function LearningPathOverview({ onOpenModule }) {
                       Estimated Time
                     </p>
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-sm">
+                      <span className={`material-symbols-outlined text-sm ${course.status === 'locked' ? 'text-slate-400' : 'text-primary'}`}>
                         schedule
                       </span>
-                      <span className="font-bold text-sm">20 hrs</span>
+                      <span className={`font-bold text-sm ${course.status === 'locked' ? 'text-slate-400' : ''}`}>{course.estimatedHrs} hrs</span>
                     </div>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
@@ -252,11 +302,19 @@ function LearningPathOverview({ onOpenModule }) {
                       Difficulty
                     </p>
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-emerald-500 text-sm">
+                      <span className={`material-symbols-outlined text-sm ${
+                        course.difficulty.toLowerCase() === 'beginner' ? 'text-emerald-500' : 
+                        course.difficulty.toLowerCase() === 'intermediate' ? 'text-yellow-500' : 
+                        'text-rose-500'
+                      }`}>
                         bar_chart
                       </span>
-                      <span className="font-bold text-sm text-emerald-600">
-                        Beginner
+                      <span className={`font-bold text-sm ${
+                        course.difficulty.toLowerCase() === 'beginner' ? 'text-emerald-600' : 
+                        course.difficulty.toLowerCase() === 'intermediate' ? 'text-yellow-600' : 
+                        'text-rose-600'
+                      }`}>
+                        {course.difficulty}
                       </span>
                     </div>
                   </div>
@@ -265,34 +323,25 @@ function LearningPathOverview({ onOpenModule }) {
                       Avg Score
                     </p>
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-amber-500 text-sm">
+                      <span className={`material-symbols-outlined text-sm ${course.status === 'locked' ? 'text-slate-400' : 'text-amber-500'}`}>
                         star
                       </span>
-                      <span className="font-bold text-sm">85%</span>
+                      <span className={`font-bold text-sm ${course.status === 'locked' ? 'text-slate-400' : ''}`}>{course.avgScore}%</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-2">
                   <div className="flex -space-x-2">
-                    <img
-                      alt="User"
-                      className="w-8 h-8 rounded-full border-2 border-white dark:border-[#161b2a]"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQqX1I48hS8vdCg-O9YAdFkbyaAb9h9wy4KIDKP4hCiJnGsa09XEBjG0Lh7wnEuUyMhm-AqnY6nt7q6s_p895IFYTvHvUwJA6NU6GuHxJEUjEdOrR3MW-WnYZ44MUnhus0DEvi7fxPgpqx8uxpRmHcpKlVEwZYqTXWB5lL7wP3rffpTRJNyGZardC0DpHHvxNJYkDpimvL4QTNFi7CzHHykywk-7XN-g37IynsezxQZCNoXqr_rndBbmytNHRvON6OGQ_lfeCQDCJN"
-                    />
-                    <img
-                      alt="User"
-                      className="w-8 h-8 rounded-full border-2 border-white dark:border-[#161b2a]"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuBljohqIFps350ag6UtluXXx7p0v0ksfdbAkuPsy_ivd3nVIjSnMzWpkn3fBJEPDOuBgan3PZ5uzSZBNZjvg4QXEppEnPh6hBwBygryK2kn7fe0QRoCgYOlpmqKGmRYAqDjsW57v8hQ7xJuCQ6N7tCtHh_6VkcByjE3GW2mRhjqDDsTigsELFnOIi8F8M_X6qJaImSKrE_m__U1aTXjn3RwAaUNW9Pk5pbIAN92Go9P5HFRRgSpoPub98BmNF0VnKdFtecv5BcNj2AS"
-                    />
-                    <img
-                      alt="User"
-                      className="w-8 h-8 rounded-full border-2 border-white dark:border-[#161b2a]"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcyHNjj0zyRUMZDIJ5zPj6k_98iSU5Z3vn3ZKiL3SJa9pFUBr2par1wrwgX17RN8dyfZVWIU7x02tN2grmCjWWrjPz8gf-oUP3BjRokLu5UyIjEsqAAovZXTXeUt2ICmYh3Ejn8AwvCY4aAF44YQgdprwMyqVooi5-LON9pC8iot8-rw2Ud_Pt_jV_WIQNkd31pUmHsN4gtBJK7cTSs8pv-jITgPxoxpRBH7HMFlHSjm-xvOy0AkT70eIqkoF8Dd8h3AdB-fzlV8b7"
-                    />
+                    {/* Placeholder for users */}
                     <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold border-2 border-white dark:border-[#161b2a]">
-                      +102
+                      +100
                     </div>
                   </div>
+                  {course.status === 'locked' && course.prerequisite && (
+                    <div className="text-[10px] font-bold text-slate-500 italic">
+                      Prerequisite: {course.prerequisite.code} {course.prerequisite.title}
+                    </div>
+                  )}
                   <div className="flex items-center gap-3">
                     <button
                       className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors border border-slate-200 dark:border-slate-700"
@@ -304,351 +353,35 @@ function LearningPathOverview({ onOpenModule }) {
                       </span>
                     </button>
                     <button
-                      className="bg-primary hover:bg-blue-600 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+                      className={`${
+                        course.status === 'locked' 
+                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' 
+                          : 'bg-primary hover:bg-blue-600 text-white shadow-lg shadow-primary/20'
+                      } text-xs font-bold px-6 py-2.5 rounded-xl transition-all flex items-center gap-2`}
                       onClick={(event) => {
                         event.stopPropagation()
-                        onOpenModule?.()
+                        if (course.status !== 'locked') onOpenModule?.(course.id)
                       }}
+                      disabled={course.status === 'locked'}
                       type="button"
                     >
-                      CONTINUE LEARNING
-                      <span className="material-symbols-outlined text-sm">
-                        arrow_forward
-                      </span>
+                      {course.status === 'locked' ? 'LOCKED' : course.status === 'in-progress' ? 'CONTINUE LEARNING' : 'START LEARNING'}
+                      {course.status !== 'locked' && (
+                        <span className="material-symbols-outlined text-sm">
+                          arrow_forward
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>
               </div>
-            ) : null}
+            ))}
 
-            {matchesModuleTwo ? (
-              <div
-                className="group relative bg-white dark:bg-[#161b2a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all hover:translate-x-1"
-                onClick={() => onOpenModule?.()}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-primary font-bold tracking-tighter">
-                        BAIT1023
-                      </span>
-                      <div className="relative inline-block group">
-                        <span className="bg-blue-500/10 text-blue-500 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-help">
-                          <span className="material-symbols-outlined text-xs">
-                            psychology
-                          </span>
-                          AI INSIGHTS
-                        </span>
-                        <div className="tooltip-box absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-xl z-10 text-center">
-                          Highly relevant for Full-Stack roles. Focus on React and
-                          Tailwind components.
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <h3 className="text-xl font-bold flex items-center gap-3 text-[#111418] dark:text-white">
-                      Web Design &amp; Development
-                      <span className="flex items-center gap-1 text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">
-                          bolt
-                        </span>
-                        400 XP
-                      </span>
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 uppercase">
-                    <span className="material-symbols-outlined text-sm">
-                      play_arrow
-                    </span>
-                    Available
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                      Estimated Time
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-sm">
-                        schedule
-                      </span>
-                      <span className="font-bold text-sm">24 hrs</span>
-                    </div>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                      Difficulty
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-emerald-500 text-sm">
-                        bar_chart
-                      </span>
-                      <span className="font-bold text-sm text-emerald-600">
-                        Beginner
-                      </span>
-                    </div>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                      Avg Score
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-amber-500 text-sm">
-                        star
-                      </span>
-                      <span className="font-bold text-sm">92%</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-[10px] font-bold text-slate-500 italic">
-                    Ready to start learning
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors border border-slate-200 dark:border-slate-700"
-                      title="View Syllabus"
-                      type="button"
-                    >
-                      <span className="material-symbols-outlined text-xl">
-                        menu_book
-                      </span>
-                    </button>
-                    <button
-                      className="bg-primary hover:bg-blue-600 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onOpenModule?.()
-                      }}
-                      type="button"
-                    >
-                      START LEARNING
-                      <span className="material-symbols-outlined text-sm">
-                        arrow_forward
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {matchesModuleThree ? (
-              <div className="group relative bg-white dark:bg-[#161b2a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 opacity-60 grayscale-[0.8] transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-400 font-bold tracking-tighter">
-                      BACS2023
-                    </span>
-                    <div className="relative inline-block group">
-                      <span className="bg-blue-500/10 text-blue-500 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-help">
-                        <span className="material-symbols-outlined text-xs">
-                          psychology
-                        </span>
-                        AI INSIGHTS
-                      </span>
-                      <div className="tooltip-box absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-xl z-10 text-center">
-                        Core software engineering principles. Essential for
-                        understanding scalable systems.
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold flex items-center gap-3 text-slate-400">
-                    Object Oriented Programming
-                    <span className="flex items-center gap-1 text-xs text-slate-400 bg-slate-400/10 px-2 py-0.5 rounded-full">
-                      <span className="material-symbols-outlined text-[14px]">
-                        bolt
-                      </span>
-                      800 XP
-                    </span>
-                  </h3>
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                  <span className="material-symbols-outlined text-sm">
-                    lock_clock
-                  </span>
-                  Locked
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                  <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                    Estimated Time
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-slate-400 text-sm">
-                      schedule
-                    </span>
-                    <span className="font-bold text-sm text-slate-400">
-                      30 hrs
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                  <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                    Difficulty
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-yellow-500 text-sm">
-                      bar_chart
-                    </span>
-                    <span className="font-bold text-sm text-yellow-500">
-                      Intermediate
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                  <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                    Avg Score
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-slate-400 text-sm">
-                      star
-                    </span>
-                    <span className="font-bold text-sm text-slate-400">
-                      76%
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <div className="text-[10px] font-bold text-slate-500 italic">
-                  Prerequisite: BACS2013 Problem Solving &amp; Programming
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700"
-                    title="View Syllabus"
-                    type="button"
-                  >
-                    <span className="material-symbols-outlined text-xl">
-                      menu_book
-                    </span>
-                  </button>
-                  <button
-                    className="bg-slate-200 dark:bg-slate-800 text-slate-500 text-xs font-bold px-6 py-2.5 rounded-xl cursor-not-allowed"
-                    disabled
-                    type="button"
-                  >
-                    LOCKED
-                  </button>
-                </div>
-              </div>
-              </div>
-            ) : null}
-            {matchesModuleFour ? (
-              <div className="group relative bg-white dark:bg-[#161b2a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 opacity-60 grayscale-[0.8] transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-400 font-bold tracking-tighter">
-                        BACS2063
-                      </span>
-                      <div className="relative inline-block group">
-                        <span className="bg-blue-500/10 text-blue-500 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-help">
-                          <span className="material-symbols-outlined text-xs">
-                            psychology
-                          </span>
-                          AI INSIGHTS
-                        </span>
-                        <div className="tooltip-box absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-xl z-10 text-center">
-                          Build the foundation for efficient problem solving and
-                          algorithm design.
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <h3 className="text-xl font-bold flex items-center gap-3 text-slate-400">
-                      Data Structures &amp; Algorithms
-                      <span className="flex items-center gap-1 text-xs text-slate-400 bg-slate-400/10 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">
-                          bolt
-                        </span>
-                        900 XP
-                      </span>
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                    <span className="material-symbols-outlined text-sm">
-                      lock_clock
-                    </span>
-                    Locked
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                      Estimated Time
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400 text-sm">
-                        schedule
-                      </span>
-                      <span className="font-bold text-sm text-slate-400">
-                        40 hrs
-                      </span>
-                    </div>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                      Difficulty
-                    </p>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-rose-500 text-sm">
-                      bar_chart
-                    </span>
-                    <span className="font-bold text-sm text-rose-500">
-                      Hard
-                    </span>
-                  </div>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
-                      Avg Score
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400 text-sm">
-                        star
-                      </span>
-                      <span className="font-bold text-sm text-slate-400">
-                        60%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-[10px] font-bold text-slate-500 italic">
-                    Prerequisite: BACS2023 Object Oriented Programming
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700"
-                      title="View Syllabus"
-                      type="button"
-                    >
-                      <span className="material-symbols-outlined text-xl">
-                        menu_book
-                      </span>
-                    </button>
-                    <button
-                      className="bg-slate-200 dark:bg-slate-800 text-slate-500 text-xs font-bold px-6 py-2.5 rounded-xl cursor-not-allowed"
-                      disabled
-                      type="button"
-                    >
-                      LOCKED
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-            {!hasMatches ? (
+            {filteredCourses.length === 0 && (
               <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center text-slate-500 dark:text-slate-400">
                 No modules match your search.
               </div>
-            ) : null}
+            )}
           </div>
         </div>
       </div>
