@@ -9,6 +9,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
   const [checked, setChecked] = useState({})
   const [allCorrect, setAllCorrect] = useState(false)
   const [completing, setCompleting] = useState(false)
+  const [optionSets, setOptionSets] = useState([])
   const [sidebarData, setSidebarData] = useState({ lessons: [], problems: [], progress: null })
   const [sidebarLoading, setSidebarLoading] = useState(false)
 
@@ -188,7 +189,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
     return correctAnswers.some((a) => normalize(a) === user)
   }
 
-  const getOptionsForQuestion = (quiz, idx) => {
+  const buildOptionsForQuestion = (quiz, idx) => {
     const q = quiz[idx]
     if (!q) return []
 
@@ -222,10 +223,24 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
       return pool.slice(0, 4)
     }
 
-    // Shuffle options so answer position is randomized per render
-    const shuffled = [...pool].sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, Math.max(4, Math.min(shuffled.length, 6)))
+    // Return a base pool; caller is responsible for shuffling once per lesson
+    return pool.slice(0, Math.max(4, Math.min(pool.length, 6)))
   }
+
+  // When quiz changes (new lesson), compute and shuffle options once per question
+  useEffect(() => {
+    if (!data?.quiz || !Array.isArray(data.quiz)) {
+      setOptionSets([])
+      return
+    }
+    const quiz = data.quiz
+    const sets = quiz.map((_, idx) => {
+      const base = buildOptionsForQuestion(quiz, idx)
+      const shuffled = [...base].sort(() => Math.random() - 0.5)
+      return shuffled
+    })
+    setOptionSets(sets)
+  }, [data?.quiz])
 
   const handleCheckAnswers = () => {
     if (!data?.quiz?.length) {
@@ -476,7 +491,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
               </h2>
               <div className="space-y-4">
                 {quiz.map((q, idx) => {
-                  const options = getOptionsForQuestion(quiz, idx)
+                  const options = optionSets[idx] || []
                   const hasOptions = options.length >= 4
 
                   return (
