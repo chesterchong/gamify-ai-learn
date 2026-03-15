@@ -94,7 +94,7 @@ function Learn() {
   }
 
   return (
-    <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen">
+    <div className="selection:bg-primary selection:text-black min-h-screen">
       <TermsThemeStyles />
       <main className="container mx-auto px-6 pt-2 pb-4">
         {activeView === 'overview' && (

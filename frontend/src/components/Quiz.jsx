@@ -2,7 +2,7 @@ import TermsThemeStyles from './TermsThemeStyles'
 
 function Quiz() {
   return (
-    <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen">
+    <div className="selection:bg-primary selection:text-black min-h-screen">
       <TermsThemeStyles />
       <style>{`
         .code-syntax-keyword {
@@ -30,7 +30,7 @@ function Quiz() {
         }
       `}</style>
       <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-        <header className="flex items-center justify-between px-6 py-4 bg-surface-light dark:bg-surface-dark border-b border-[#e5e7eb] dark:border-[#2d3b4a]">
+        <header className="flex items-center justify-between px-6 py-4 glass border-b border-[#e5e7eb]/30 dark:border-slate-700/50">
           <button className="flex items-center gap-2 text-[#637588] dark:text-[#94a3b8] hover:text-[#111418] dark:hover:text-white transition-colors">
             <span className="material-symbols-outlined text-[24px]">close</span>
             <span className="text-sm font-bold hidden sm:block">Quit</span>
@@ -81,7 +81,7 @@ function Quiz() {
               based on the nested loop structure.
             </p>
           </div>
-          <div className="w-full mb-10 rounded-xl overflow-hidden shadow-lg border border-[#e5e7eb] dark:border-[#2d3b4a]">
+          <div className="w-full mb-10 rounded-xl overflow-hidden shadow-lg glass-card border border-[#e5e7eb]/50 dark:border-slate-700/50">
             <div className="bg-[#eef0f2] dark:bg-[#1f2933] px-4 py-2 flex items-center gap-2 border-b border-[#e5e7eb] dark:border-[#2d3b4a]">
               <div className="w-3 h-3 rounded-full bg-[#ff5f57]"></div>
               <div className="w-3 h-3 rounded-full bg-[#febc2e]"></div>
@@ -136,8 +136,8 @@ function Quiz() {
             </div>
           </div>
           <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button className="group relative flex items-center p-4 rounded-xl border-2 border-[#e5e7eb] dark:border-[#2d3b4a] bg-surface-light dark:bg-surface-dark hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0f2f4] dark:bg-[#1f2933] text-[#637588] dark:text-[#94a3b8] font-bold group-hover:bg-white group-hover:text-primary transition-colors">
+            <button className="group relative flex items-center p-4 rounded-xl border-2 border-[#e5e7eb]/50 dark:border-slate-700/50 glass hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0f2f4]/80 dark:bg-[#1f2933]/80 text-[#637588] dark:text-[#94a3b8] font-bold group-hover:bg-white group-hover:text-primary transition-colors">
                 A
               </div>
               <div className="ml-4 flex-1">
@@ -149,8 +149,8 @@ function Quiz() {
                 </p>
               </div>
             </button>
-            <button className="group relative flex items-center p-4 rounded-xl border-2 border-[#e5e7eb] dark:border-[#2d3b4a] bg-surface-light dark:bg-surface-dark hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0f2f4] dark:bg-[#1f2933] text-[#637588] dark:text-[#94a3b8] font-bold group-hover:bg-white group-hover:text-primary transition-colors">
+            <button className="group relative flex items-center p-4 rounded-xl border-2 border-[#e5e7eb]/50 dark:border-slate-700/50 glass hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0f2f4]/80 dark:bg-[#1f2933]/80 text-[#637588] dark:text-[#94a3b8] font-bold group-hover:bg-white group-hover:text-primary transition-colors">
                 B
               </div>
               <div className="ml-4 flex-1">
@@ -178,7 +178,7 @@ function Quiz() {
                 <span className="material-symbols-outlined">check_circle</span>
               </div>
             </button>
-            <button className="group relative flex items-center p-4 rounded-xl border-2 border-[#e5e7eb] dark:border-[#2d3b4a] bg-surface-light dark:bg-surface-dark hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
+            <button className="group relative flex items-center p-4 rounded-xl border-2 border-[#e5e7eb]/50 dark:border-slate-700/50 glass hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f0f2f4] dark:bg-[#1f2933] text-[#637588] dark:text-[#94a3b8] font-bold group-hover:bg-white group-hover:text-primary transition-colors">
                 D
               </div>
@@ -193,7 +193,7 @@ function Quiz() {
             </button>
           </div>
         </main>
-        <footer className="sticky bottom-0 left-0 right-0 bg-surface-light dark:bg-surface-dark border-t border-[#e5e7eb] dark:border-[#2d3b4a] p-4 sm:px-8 z-10">
+        <footer className="sticky bottom-0 left-0 right-0 glass border-t border-[#e5e7eb]/30 dark:border-slate-700/50 p-4 sm:px-8 z-10">
           <div className="max-w-[960px] mx-auto flex items-center justify-between gap-4">
             <button className="hidden sm:flex px-6 py-3 rounded-lg text-[#637588] dark:text-[#94a3b8] font-bold text-sm hover:bg-[#f0f2f4] dark:hover:bg-[#1f2933] transition-colors focus:outline-none focus:ring-2 focus:ring-[#637588]/50">
               Skip Question

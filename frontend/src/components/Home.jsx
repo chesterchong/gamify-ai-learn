@@ -4,7 +4,7 @@ import GradientText from './GradientText'
 
 function Home() {
   return (
-    <div className="bg-background-dark selection:bg-primary selection:text-black relative overflow-hidden">
+    <div className="selection:bg-primary selection:text-black relative overflow-hidden min-h-screen">
       <style>{`
         :root {
           font-family: 'JetBrains Mono', monospace;

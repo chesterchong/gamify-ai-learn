@@ -3,10 +3,12 @@ import TopNav from './TopNav'
 
 function AppLayout() {
   return (
-    <>
+    <div className="page-glass-canvas">
       <TopNav />
-      <Outlet />
-    </>
+      <main className="relative min-h-[calc(100vh-4rem)]">
+        <Outlet />
+      </main>
+    </div>
   )
 }
 

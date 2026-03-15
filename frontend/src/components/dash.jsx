@@ -3,7 +3,7 @@ import ShinyText from './ShinyText'
 
 function Dash() {
   return (
-    <div className="bg-background-dark selection:bg-primary selection:text-black min-h-screen">
+    <div className="selection:bg-primary selection:text-black min-h-screen">
       <TermsThemeStyles />
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -39,7 +39,7 @@ function Dash() {
           </div>
 
           <div className="grid grid-cols-12 gap-6 mb-6">
-            <div className="col-span-12 lg:col-span-8 relative overflow-hidden bg-slate-900 rounded-2xl p-6 md:p-8 border border-primary/30 group">
+            <div className="col-span-12 lg:col-span-8 relative overflow-hidden glass-panel rounded-2xl p-6 md:p-8 border border-primary/30 group">
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-[100px] rounded-full" style={{ backgroundColor: 'rgba(37,123,244,0.2)' }} />
               <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/20 blur-[100px] rounded-full" />
               <div className="relative z-10 h-full flex flex-col">
@@ -71,7 +71,7 @@ function Dash() {
             </div>
 
             <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
-              <div className="dash-surface p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div className="dash-surface glass-card p-5 rounded-2xl border border-slate-700/50 flex items-center justify-between">
                 <div>
                   <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Average Score</p>
                   <h4 className="text-2xl font-bold text-white">88.5%</h4>
@@ -80,7 +80,7 @@ function Dash() {
                   <span className="material-symbols-outlined text-blue-500">percent</span>
                 </div>
               </div>
-              <div className="dash-surface p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div className="dash-surface glass-card p-5 rounded-2xl border border-slate-700/50 flex items-center justify-between">
                 <div>
                   <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Quizzes Completed</p>
                   <h4 className="text-2xl font-bold text-white">42</h4>
@@ -89,7 +89,7 @@ function Dash() {
                   <span className="material-symbols-outlined text-purple-500">task_alt</span>
                 </div>
               </div>
-              <div className="dash-surface p-5 rounded-2xl border border-slate-700 flex items-center justify-between">
+              <div className="dash-surface glass-card p-5 rounded-2xl border border-slate-700/50 flex items-center justify-between">
                 <div>
                   <p className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Accuracy Rate</p>
                   <h4 className="text-2xl font-bold text-white">91.2%</h4>
@@ -102,7 +102,7 @@ function Dash() {
           </div>
 
           <div className="grid grid-cols-12 gap-6 mb-6">
-            <div className="col-span-12 lg:col-span-4 dash-surface p-6 rounded-2xl border border-slate-700">
+            <div className="col-span-12 lg:col-span-4 dash-surface glass-card p-6 rounded-2xl border border-slate-700/50">
               <h3 className="text-lg font-bold text-white mb-6">Mastery Overview</h3>
               <div className="flex flex-col items-center">
                 <div className="relative w-44 h-44 rounded-full flex items-center justify-center donut-gradient">
@@ -125,7 +125,7 @@ function Dash() {
             </div>
 
             <div className="col-span-12 lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="dash-surface p-6 rounded-2xl border border-slate-700">
+              <div className="dash-surface glass-card p-6 rounded-2xl border border-slate-700/50">
                 <div className="flex items-center gap-2 mb-6">
                   <span className="material-symbols-outlined text-green-500">verified</span>
                   <h3 className="text-lg font-bold text-white">Top Strengths</h3>
@@ -145,7 +145,7 @@ function Dash() {
                   </li>
                 </ul>
               </div>
-              <div className="dash-surface p-6 rounded-2xl border border-slate-700">
+              <div className="dash-surface glass-card p-6 rounded-2xl border border-slate-700/50">
                 <div className="flex items-center gap-2 mb-6">
                   <span className="material-symbols-outlined text-orange-500">trending_up</span>
                   <h3 className="text-lg font-bold text-white">Areas for Improvement</h3>

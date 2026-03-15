@@ -33,12 +33,12 @@ function ProfileShareModal({ isOpen, onClose, link }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">
       <button
         aria-label="Close share modal"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-md"
         onClick={onClose}
         type="button"
       />
       <div
-        className="relative w-full max-w-xl rounded-2xl border border-[#1f2937] bg-[#131a24] text-white shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)]"
+        className="relative w-full max-w-xl rounded-2xl glass-deep border border-slate-700/50 text-white shadow-[0_24px_60px_-30px_rgba(0,0,0,0.5)]"
         role="dialog"
         aria-modal="true"
         aria-label="Profile sharing"

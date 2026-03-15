@@ -128,7 +128,7 @@ function LearningPathModule({ courseId, onBack, onOpenChapter }) {
                 </span>
               </div>
               
-              <div className={`bg-white dark:bg-[#151f2b] border rounded-2xl p-6 shadow-sm transition-all ${
+              <div className={`glass-card rounded-2xl p-6 shadow-sm transition-all ${
                 chapter.status === 'in-progress' ? 'border-primary shadow-xl ring-1 ring-primary/10' : 
                 chapter.status === 'completed' ? 'border-green-200 dark:border-green-900/30' : 'border-[#dbe0e6] dark:border-gray-800'
               }`}>

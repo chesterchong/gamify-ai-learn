@@ -113,7 +113,7 @@ function LearningPathOverview({ onOpenModule }) {
                   search
                 </span>
                 <input
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161b2a] focus:ring-primary focus:border-primary dark:text-white transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl glass border-slate-200/50 dark:border-slate-700/50 focus:ring-primary focus:border-primary dark:text-white transition-all"
                   placeholder="Search modules..."
                   type="text"
                   value={searchInput}
@@ -121,7 +121,7 @@ function LearningPathOverview({ onOpenModule }) {
                 />
                 </div>
                 <button
-                  className="h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161b2a] text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2 hover:text-primary hover:border-primary/40 transition-colors"
+                  className="h-11 px-4 rounded-xl glass border border-slate-200/50 dark:border-slate-700/50 text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2 hover:text-primary hover:border-primary/40 transition-colors"
                   onClick={() => setIsFiltersOpen((prev) => !prev)}
                   type="button"
                 >
@@ -136,7 +136,7 @@ function LearningPathOverview({ onOpenModule }) {
               </div>
             </div>
             {isFiltersOpen ? (
-              <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#121827] p-4">
+              <div className="mt-3 flex flex-col gap-3 rounded-2xl glass p-4">
                 <div className="flex flex-wrap gap-2 items-center">
                   <p className="text-[11px] font-bold tracking-[0.2em] text-slate-400 mr-1">
                     DIFFICULTY
@@ -230,7 +230,7 @@ function LearningPathOverview({ onOpenModule }) {
             {filteredCourses.map((course) => (
               <div
                 key={course.id}
-                className={`group relative bg-white dark:bg-[#161b2a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 transition-all hover:translate-x-1 ${
+                className={`group relative glass-card rounded-2xl p-6 transition-all hover:translate-x-1 ${
                   course.status === 'locked' ? 'opacity-60 grayscale-[0.8]' : 'shadow-xl shadow-primary/5'
                 }`}
                 onClick={() => course.status !== 'locked' && onOpenModule?.(course.id)}
@@ -288,7 +288,7 @@ function LearningPathOverview({ onOpenModule }) {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                  <div className="glass p-3 rounded-xl border border-slate-200/30 dark:border-slate-600/30">
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
                       Estimated Time
                     </p>
@@ -299,7 +299,7 @@ function LearningPathOverview({ onOpenModule }) {
                       <span className={`font-bold text-sm ${course.status === 'locked' ? 'text-slate-400' : ''}`}>{course.estimatedHrs} hrs</span>
                     </div>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                  <div className="glass p-3 rounded-xl border border-slate-200/30 dark:border-slate-600/30">
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
                       Difficulty
                     </p>
@@ -320,7 +320,7 @@ function LearningPathOverview({ onOpenModule }) {
                       </span>
                     </div>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                  <div className="glass p-3 rounded-xl border border-slate-200/30 dark:border-slate-600/30">
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
                       Avg Score
                     </p>
@@ -383,7 +383,7 @@ function LearningPathOverview({ onOpenModule }) {
             ))}
 
             {filteredCourses.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center text-slate-500 dark:text-slate-400">
+              <div className="rounded-2xl glass border border-dashed border-slate-300/50 dark:border-slate-600/50 p-6 text-center text-slate-500 dark:text-slate-400">
                 No modules match your search.
               </div>
             )}

@@ -378,7 +378,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
       <div className="flex gap-6">
         {/* Sidebar: lessons and problems in this chapter (Terms-style navigation) */}
         <aside className="hidden md:block w-64 flex-shrink-0">
-          <div className="sticky top-24">
+          <div className="sticky top-24 glass-panel rounded-xl p-4 border border-slate-700/50">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-4 flex items-center">
               <span className="material-symbols-outlined text-sm mr-2">menu_book</span>
               {module?.title || 'Current chapter'}
@@ -478,7 +478,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
           </header>
 
           <section className="prose prose-slate dark:prose-invert max-w-none">
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161b2a] p-6 leading-relaxed text-[#111418] dark:text-slate-300">
+            <div className="rounded-xl glass-card border border-slate-200/50 dark:border-slate-700/50 p-6 leading-relaxed text-[#111418] dark:text-slate-300">
               {renderContent(content)}
             </div>
           </section>
@@ -502,7 +502,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
                         ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20'
                         : checked[idx] === false
                         ? 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20'
-                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161b2a]'
+                        : 'border-slate-200 dark:border-slate-700 glass'
                     }`}
                   >
                     <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
@@ -560,10 +560,10 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
               </div>
               <button
                 onClick={handleCheckAnswers}
-                className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-blue-600 transition-colors flex items-center gap-2"
+                className="mt-6 w-full sm:w-auto min-w-[180px] px-6 py-3 rounded-xl bg-primary text-white text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:bg-primary-hover active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 border border-primary/20"
                 type="button"
               >
-                <span className="material-symbols-outlined text-lg">fact_check</span>
+                <span className="material-symbols-outlined text-[20px]">fact_check</span>
                 Check answers
               </button>
             </section>
