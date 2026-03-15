@@ -270,19 +270,24 @@ function LearningPathOverview({ onOpenModule }) {
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase ${
-                      course.status === 'in-progress' ? 'text-emerald-500' : 
-                      course.status === 'available' ? 'text-blue-500' : 
-                      'text-slate-400'
+                      course.status === 'locked'
+                        ? 'text-slate-400'
+                        : course.progressPercent > 0 && course.progressPercent < 100
+                        ? 'text-emerald-500'
+                        : course.progressPercent >= 100
+                        ? 'text-violet-500'
+                        : 'text-blue-500'
                     }`}>
-                      {course.status === 'in-progress' && <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>}
-                      {course.status === 'locked' && <span className="material-symbols-outlined text-sm">lock_clock</span>}
-                      {course.status.replace('-', ' ')}
+                      {course.status === 'locked' && (
+                        <span className="material-symbols-outlined text-sm">lock_clock</span>
+                      )}
+                      {course.status !== 'locked' && course.progressPercent > 0 && course.progressPercent < 100 && (
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                      )}
+                      {course.status === 'locked'
+                        ? 'LOCKED'
+                        : `${course.progressPercent ?? 0}% COMPLETED`}
                     </span>
-                    {course.status === 'in-progress' && (
-                      <span className="text-[10px] text-slate-400">
-                        {course.progressPercent}% Completed
-                      </span>
-                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 mb-6">

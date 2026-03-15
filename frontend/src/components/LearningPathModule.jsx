@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-function LearningPathModule({ courseId, onBack }) {
+function LearningPathModule({ courseId, onBack, onOpenChapter }) {
   const [moduleData, setModuleData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -94,19 +94,37 @@ function LearningPathModule({ courseId, onBack }) {
       )}
 
       <div className="relative">
-        <div className="absolute left-4 top-4 bottom-4 w-1 bg-gradient-to-b from-primary via-blue-400 to-slate-200 dark:to-slate-800 rounded-full"></div>
+        <div className="absolute left-5 lg:left-6 top-4 bottom-4 w-1 bg-gradient-to-b from-primary via-blue-400 to-slate-200 dark:to-slate-800 rounded-full"></div>
         <div className="space-y-12 pl-12 lg:pl-16">
           {chapters.map((chapter, index) => (
-            <div key={chapter.id} className={`relative ${chapter.status === 'locked' ? 'opacity-50' : ''}`}>
-              <div className={`absolute -left-[45px] lg:-left-[61px] top-6 size-8 lg:size-10 rounded-full border-4 border-background-light dark:border-background-dark flex items-center justify-center text-white shadow-lg z-10 transition-transform ${
-                chapter.status === 'completed' ? 'bg-green-500' : 
-                chapter.status === 'in-progress' ? 'bg-primary ring-4 ring-blue-100 dark:ring-blue-900/20' : 
-                chapter.status === 'available' ? 'bg-blue-400' : 'bg-slate-400'
-              }`}>
-                <span className="material-symbols-outlined text-[20px] font-bold">
-                  {chapter.status === 'completed' ? 'check' : 
-                   chapter.status === 'in-progress' ? 'play_arrow' : 
-                   chapter.status === 'available' ? 'lock_open' : 'lock'}
+            <div key={chapter.id} className={`relative ${chapter.status === 'locked' ? 'opacity-60' : ''}`}>
+              <div
+                className={`
+                  absolute -left-[40px] lg:-left-[54px] top-7
+                  w-8 h-8 lg:w-9 lg:h-9
+                  rounded-full flex items-center justify-center
+                  text-[16px] text-white
+                  shadow-sm z-10 transition-transform
+                  ring-2 ring-slate-900/70
+                  ${
+                    chapter.status === 'completed'
+                      ? 'bg-green-500'
+                      : chapter.status === 'in-progress'
+                      ? 'bg-primary'
+                      : chapter.status === 'available'
+                      ? 'bg-slate-800'
+                      : 'bg-slate-600'
+                  }
+                `}
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {chapter.status === 'completed'
+                    ? 'check_circle'
+                    : chapter.status === 'in-progress'
+                    ? 'play_arrow'
+                    : chapter.status === 'available'
+                    ? 'menu_book'
+                    : 'lock'}
                 </span>
               </div>
               
@@ -135,11 +153,7 @@ function LearningPathModule({ courseId, onBack }) {
                       {chapter.description}
                     </p>
                   </div>
-                  {chapter.status === 'completed' && (
-                    <div className="size-10 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-black border-2 border-white dark:border-[#151f2b] shadow-lg">
-                      A+
-                    </div>
-                  )}
+                  {/* Removed A+ badge on completed chapters to simplify UI */}
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500">
@@ -153,7 +167,7 @@ function LearningPathModule({ courseId, onBack }) {
                   </span>
                 </div>
 
-                {chapter.status === 'in-progress' && (
+                {(chapter.status === 'in-progress') && (
                   <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
                     <div className="flex flex-col gap-1 w-1/2">
                       <div className="flex justify-between text-xs font-bold text-gray-500">
@@ -164,7 +178,11 @@ function LearningPathModule({ courseId, onBack }) {
                         <div className="h-full bg-primary rounded-full" style={{ width: `${chapter.progress}%` }}></div>
                       </div>
                     </div>
-                    <button className="bg-primary hover:bg-blue-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2">
+                    <button
+                      onClick={() => onOpenChapter?.(chapter.id, course.title)}
+                      className="bg-primary hover:bg-blue-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
+                      type="button"
+                    >
                       Continue
                       <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
@@ -173,9 +191,29 @@ function LearningPathModule({ courseId, onBack }) {
 
                 {chapter.status === 'available' && (
                   <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-                    <button className="w-full bg-primary hover:bg-blue-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => onOpenChapter?.(chapter.id, course.title)}
+                      className="w-full bg-primary hover:bg-blue-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+                      type="button"
+                    >
                       Start Chapter
                       <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                    </button>
+                  </div>
+                )}
+
+                {chapter.status === 'completed' && (
+                  <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div className="text-xs text-slate-500">
+                      You have completed this chapter. Tap to review any lesson.
+                    </div>
+                    <button
+                      onClick={() => onOpenChapter?.(chapter.id, course.title)}
+                      className="bg-primary hover:bg-blue-600 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
+                      type="button"
+                    >
+                      Review chapter
+                      <span className="material-symbols-outlined text-[16px]">history</span>
                     </button>
                   </div>
                 )}

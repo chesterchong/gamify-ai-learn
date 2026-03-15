@@ -83,7 +83,7 @@ model Lesson {
   order       Int
   title       String   // e.g., "Static vs Dynamic Arrays"
   durationMin Int      @default(10)
-  type        String   @default("reading") // "reading", "video", "quiz", "coding"
+  type        String   @default("reading") // "reading", "quiz", "coding"
   content     String?  @db.Text
   
   userProgress UserLessonProgress[]
