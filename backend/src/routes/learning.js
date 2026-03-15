@@ -41,23 +41,27 @@ router.get('/courses', isAuthenticated, async (req, res) => {
       let status = 'available'
       let progressPercent = 0
       let grade = null
+      let isPrereqCompleted = true
 
       if (activeProgress) {
         status = activeProgress.status
         progressPercent = activeProgress.progress
         grade = activeProgress.grade
-      } else if (course.prerequisiteId) {
-        // Find the prerequisite course in the list
+      }
+
+      // Enforce prerequisite for all courses that have one, regardless of progress
+      if (course.prerequisiteId) {
         const prereqCourse = courses.find(c => c.id === course.prerequisiteId);
         
-        // A course is only unlocked if ALL its prerequisite's modules are completed
         const prereqModules = prereqCourse?.modules || [];
-        const isPrereqCompleted = prereqModules.length > 0 && prereqModules.every(m => 
+        isPrereqCompleted = prereqModules.length > 0 && prereqModules.every(m => 
           m.userProgress.some(p => p.status === 'completed')
         );
 
         if (!isPrereqCompleted) {
           status = 'locked'
+          progressPercent = 0
+          grade = null
         }
       }
 

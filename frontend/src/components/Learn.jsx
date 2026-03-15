@@ -13,6 +13,7 @@ function Learn() {
   const [selectedModuleId, setSelectedModuleId] = useState(searchParams.get('moduleId'))
   const [selectedLessonId, setSelectedLessonId] = useState(searchParams.get('lessonId'))
   const [courseTitle, setCourseTitle] = useState('')
+  const [moduleCache, setModuleCache] = useState({})
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
   useEffect(() => {
@@ -32,22 +33,15 @@ function Learn() {
 
   const handleOpenChapter = async (moduleId, title) => {
     setCourseTitle(title || '')
-    try {
-      const res = await fetch(`${apiBaseUrl}/api/learning/modules/${moduleId}`, {
-        credentials: 'include',
-      })
-      if (!res.ok) {
-        setSearchParams({ view: 'chapter', courseId: selectedCourseId, moduleId })
-        return
-      }
-      const mod = await res.json()
+    const cached = moduleCache[moduleId]
+    const pickTargetLesson = (mod) => {
       const items = [
         ...(mod.lessons || []),
         ...(mod.problems || []),
       ].sort((a, b) => (a.order || 0) - (b.order || 0))
 
       if (!items.length) {
-        setSearchParams({ view: 'chapter', courseId: selectedCourseId, moduleId })
+        setSearchParams({ view: 'module', courseId: selectedCourseId })
         return
       }
 
@@ -60,8 +54,26 @@ function Learn() {
         moduleId,
         lessonId: target.id,
       })
+    }
+
+    if (cached) {
+      pickTargetLesson(cached)
+      return
+    }
+
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/learning/modules/${moduleId}`, {
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        setSearchParams({ view: 'module', courseId: selectedCourseId })
+        return
+      }
+      const mod = await res.json()
+      setModuleCache((prev) => ({ ...prev, [moduleId]: mod }))
+      pickTargetLesson(mod)
     } catch {
-      setSearchParams({ view: 'chapter', courseId: selectedCourseId, moduleId })
+      setSearchParams({ view: 'module', courseId: selectedCourseId })
     }
   }
 
@@ -100,6 +112,7 @@ function Learn() {
             lessonId={selectedLessonId}
             onBack={handleBackToChapter}
             onComplete={() => {}}
+            initialModuleData={moduleCache[selectedModuleId]}
           />
         )}
       </main>

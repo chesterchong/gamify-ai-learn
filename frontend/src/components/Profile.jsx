@@ -8,6 +8,7 @@ function Profile() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [courseStats, setCourseStats] = useState({ completed: 0, total: 0 })
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
   useEffect(() => {
@@ -33,6 +34,26 @@ function Profile() {
     fetchUserData()
   }, [apiBaseUrl])
 
+  // Fetch course progress to power "Modules Done" card
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/learning/courses`, {
+          credentials: 'include',
+        })
+        if (!response.ok) return
+        const data = await response.json()
+        const total = data.length || 0
+        const completed = data.filter((c) => c.status === 'completed').length
+        setCourseStats({ completed, total })
+      } catch {
+        // Silently ignore; keep defaults if learning data is unavailable
+      }
+    }
+
+    fetchCourses()
+  }, [apiBaseUrl])
+
   // Generate profile share link from username or email
   const profileShareLink = user?.username 
     ? `sample.com/u/${user.username}` 
@@ -45,6 +66,9 @@ function Profile() {
   const xpForNextLevel = 5000 // This could be calculated based on level
   const xpProgress = Math.min((currentXP / xpForNextLevel) * 100, 100)
   const xpNeeded = Math.max(xpForNextLevel - currentXP, 0)
+
+  const modulesDone = courseStats.completed
+  const totalModules = courseStats.total || modulesDone || 0
 
   // Learning activity heatmap: 7 rows (e.g. days) × 52 columns (weeks). Each cell = 0–3 (intensity).
   // Replace with real contribution data from API when ready.
@@ -161,7 +185,7 @@ function Profile() {
               </div>
               <div className="h-3 w-full bg-slate-700 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full relative overflow-hidden transition-[width] duration-300"
+                  className="progress-bar-fill h-full rounded-full relative overflow-hidden transition-[width] duration-300"
                   style={{ width: `${xpProgress}%` }}
                 >
                   <div className="absolute inset-0 bg-white/20 animate-pulse" />
@@ -249,7 +273,10 @@ function Profile() {
                   Modules Done
                 </p>
                 <p className="text-3xl font-bold tabular-nums text-white">
-                  12<span className="text-xl font-medium text-slate-400"> / 20</span>
+                  {modulesDone}
+                  <span className="text-xl font-medium text-slate-400">
+                    {totalModules ? ` / ${totalModules}` : ''}
+                  </span>
                 </p>
               </div>
               <div className="rounded-lg bg-emerald-500/10 p-2.5 text-emerald-400">
@@ -336,7 +363,7 @@ function Profile() {
                 <div className="min-w-0 flex-1">
                   <h3 className="font-bold text-white truncate">Recursion King</h3>
                   <div className="w-full bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
-                    <div className="bg-primary h-full rounded-full transition-[width]" style={{ width: '70%' }} />
+                    <div className="progress-bar-fill h-full rounded-full transition-[width]" style={{ width: '70%' }} />
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">70% complete</p>
                   <span className="inline-block text-xs font-semibold text-primary mt-2 uppercase tracking-wide">Continue</span>

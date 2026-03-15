@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-function LessonPage({ lessonId, onBack, onComplete }) {
+function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -70,6 +70,37 @@ function LessonPage({ lessonId, onBack, onComplete }) {
       setLoading(false)
       setError('No lesson selected')
       return
+    }
+
+    // Ensure we start at the top whenever a new lesson is loaded
+    window.scrollTo({ top: 0, behavior: 'auto' })
+
+    // If we have prefetched module data and haven't built the sidebar yet, initialize from it
+    if (
+      initialModuleData &&
+      !sidebarData.lessons.length &&
+      !sidebarData.problems.length
+    ) {
+      const lessons = initialModuleData.lessons || []
+      const problems = initialModuleData.problems || []
+      setSidebarData({
+        lessons,
+        problems,
+        progress: computeProgress(lessons, problems),
+      })
+      if (!data) {
+        const optimistic = buildDataFromSidebar(
+          lessonId,
+          initialModuleData.module,
+        )
+        if (optimistic) {
+          setData(optimistic)
+          setAnswers({})
+          setChecked({})
+          setAllCorrect(false)
+          setLoading(false)
+        }
+      }
     }
 
     const load = async () => {
@@ -178,38 +209,45 @@ function LessonPage({ lessonId, onBack, onComplete }) {
   }
 
   const handleMarkComplete = async () => {
-    if (!data?.lesson?.id) return
+    if (!data?.lesson?.id || completing) return
+
+    // Optimistic UI update: mark as completed immediately
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            isCompleted: true,
+          }
+        : prev,
+    )
+    setSidebarData((prev) => {
+      const lessons = (prev.lessons || []).map((l) =>
+        l.id === lessonId ? { ...l, isCompleted: true } : l,
+      )
+      const problems = (prev.problems || []).map((p) =>
+        p.id === lessonId ? { ...p, isCompleted: true } : p,
+      )
+      return {
+        lessons,
+        problems,
+        progress: computeProgress(lessons, problems),
+      }
+    })
+    onComplete?.()
+
+    // Background save: prevent double-submit but don't block UI
     setCompleting(true)
     try {
       const res = await fetch(`${apiBaseUrl}/api/learning/lessons/${lessonId}/complete`, {
         method: 'POST',
         credentials: 'include',
       })
-      if (!res.ok) throw new Error('Failed to save progress')
-      onComplete?.()
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              isCompleted: true,
-            }
-          : prev,
-      )
-      setSidebarData((prev) => {
-        const lessons = (prev.lessons || []).map((l) =>
-          l.id === lessonId ? { ...l, isCompleted: true } : l,
-        )
-        const problems = (prev.problems || []).map((p) =>
-          p.id === lessonId ? { ...p, isCompleted: true } : p,
-        )
-        return {
-          lessons,
-          problems,
-          progress: computeProgress(lessons, problems),
-        }
-      })
+      if (!res.ok) {
+        throw new Error('Failed to save progress')
+      }
     } catch (err) {
       console.error(err)
+      // In case of error, we keep the optimistic UI but log for debugging
     } finally {
       setCompleting(false)
     }
@@ -301,7 +339,7 @@ function LessonPage({ lessonId, onBack, onComplete }) {
                 </div>
                 <div className="h-1.5 rounded-full bg-slate-900 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-primary transition-all"
+                    className="progress-bar-fill h-full rounded-full transition-all"
                     style={{ width: `${sidebarData.progress.progressPercent ?? 0}%` }}
                   />
                 </div>
@@ -487,14 +525,8 @@ function LessonPage({ lessonId, onBack, onComplete }) {
                   className="px-4 py-2 rounded-full border border-slate-300 dark:border-slate-600 text-xs font-semibold text-slate-600 dark:text-slate-200 hover:border-primary hover:text-primary disabled:opacity-50 transition-colors flex items-center gap-1"
                   type="button"
                 >
-                  {completing ? (
-                    'Saving...'
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[16px]">check</span>
-                      Mark as done
-                    </>
-                  )}
+                  <span className="material-symbols-outlined text-[16px]">check</span>
+                  Mark as done
                 </button>
               )}
             </div>

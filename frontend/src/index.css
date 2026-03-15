@@ -10,3 +10,24 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Subtle gradient movement for progress bars */
+@keyframes progress-gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.progress-bar-fill {
+  background: linear-gradient(
+    90deg,
+    #137fec,
+    #3b9aff,
+    #137fec
+  );
+  background-size: 200% 100%;
+  animation: progress-gradient-shift 3s ease-in-out infinite;
+}

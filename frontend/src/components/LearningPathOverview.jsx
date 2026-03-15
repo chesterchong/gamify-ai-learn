@@ -336,17 +336,24 @@ function LearningPathOverview({ onOpenModule }) {
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-2">
-                  <div className="flex -space-x-2">
-                    {/* Placeholder for users */}
-                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold border-2 border-white dark:border-[#161b2a]">
-                      +100
-                    </div>
+                  <div className="flex-1">
+                    {course.prerequisite && (
+                      <div className="flex items-center gap-1 text-[10px] font-bold italic">
+                        {course.status === 'locked' ? (
+                          <span className="material-symbols-outlined text-[14px] text-slate-400">
+                            lock
+                          </span>
+                        ) : (
+                          <span className="material-symbols-outlined text-[14px] text-emerald-500">
+                            check_circle
+                          </span>
+                        )}
+                        <span className="text-slate-500">
+                          Prerequisite: {course.prerequisite.code} {course.prerequisite.title}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {course.status === 'locked' && course.prerequisite && (
-                    <div className="text-[10px] font-bold text-slate-500 italic">
-                      Prerequisite: {course.prerequisite.code} {course.prerequisite.title}
-                    </div>
-                  )}
                   <div className="flex items-center gap-3">
                     <button
                       className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors border border-slate-200 dark:border-slate-700"

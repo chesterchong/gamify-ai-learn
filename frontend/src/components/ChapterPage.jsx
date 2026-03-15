@@ -149,7 +149,7 @@ function ChapterPage({ moduleId, courseId, courseTitle, onBack, onOpenLesson }) 
           <p className="text-xs font-bold text-slate-500 uppercase mb-1">Progress</p>
           <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-primary rounded-full transition-all"
+              className="progress-bar-fill h-full rounded-full transition-all"
               style={{ width: `${progress?.progressPercent ?? 0}%` }}
             />
           </div>

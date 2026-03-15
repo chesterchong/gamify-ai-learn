@@ -167,17 +167,20 @@ function LearningPathModule({ courseId, onBack, onOpenChapter }) {
                   </span>
                 </div>
 
-                {(chapter.status === 'in-progress') && (
-                  <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <div className="flex flex-col gap-1 w-1/2">
-                      <div className="flex justify-between text-xs font-bold text-gray-500">
-                        <span>Progress</span>
-                        <span className="text-primary">{chapter.progress}%</span>
-                      </div>
-                      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden w-full">
-                        <div className="h-full bg-primary rounded-full" style={{ width: `${chapter.progress}%` }}></div>
-                      </div>
+                <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <div className="flex flex-col gap-1 w-1/2">
+                    <div className="flex justify-between text-xs font-bold text-gray-500">
+                      <span>Progress</span>
+                      <span className="text-primary">{chapter.progress}%</span>
                     </div>
+                    <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden w-full">
+                      <div
+                        className="progress-bar-fill h-full rounded-full"
+                        style={{ width: `${chapter.progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  {chapter.status === 'in-progress' && (
                     <button
                       onClick={() => onOpenChapter?.(chapter.id, course.title)}
                       className="bg-primary hover:bg-blue-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
@@ -186,37 +189,30 @@ function LearningPathModule({ courseId, onBack, onOpenChapter }) {
                       Continue
                       <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
-                  </div>
-                )}
-
-                {chapter.status === 'available' && (
-                  <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  )}
+                  {chapter.status === 'available' && (
                     <button
                       onClick={() => onOpenChapter?.(chapter.id, course.title)}
-                      className="w-full bg-primary hover:bg-blue-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+                      className="bg-primary hover:bg-blue-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
                       type="button"
                     >
-                      Start Chapter
+                      Start
                       <span className="material-symbols-outlined text-[16px]">play_arrow</span>
                     </button>
-                  </div>
-                )}
-
-                {chapter.status === 'completed' && (
-                  <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <div className="text-xs text-slate-500">
-                      You have completed this chapter. Tap to review any lesson.
-                    </div>
+                  )}
+                  {chapter.status === 'completed' && (
                     <button
                       onClick={() => onOpenChapter?.(chapter.id, course.title)}
-                      className="bg-primary hover:bg-blue-600 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
+                      className="bg-primary hover:bg-blue-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
                       type="button"
                     >
-                      Review chapter
+                      Review
                       <span className="material-symbols-outlined text-[16px]">history</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {/* The CTA buttons above handle all statuses; extra sections removed to keep layout consistent */}
               </div>
             </div>
           ))}
