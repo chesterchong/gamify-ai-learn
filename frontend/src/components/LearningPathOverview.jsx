@@ -269,25 +269,22 @@ function LearningPathOverview({ onOpenModule }) {
                     </h3>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase ${
-                      course.status === 'locked'
-                        ? 'text-slate-400'
-                        : course.progressPercent > 0 && course.progressPercent < 100
-                        ? 'text-emerald-500'
-                        : course.progressPercent >= 100
-                        ? 'text-violet-500'
-                        : 'text-blue-500'
-                    }`}>
-                      {course.status === 'locked' && (
-                        <span className="material-symbols-outlined text-sm">lock_clock</span>
-                      )}
-                      {course.status !== 'locked' && course.progressPercent > 0 && course.progressPercent < 100 && (
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                      )}
-                      {course.status === 'locked'
-                        ? 'LOCKED'
-                        : `${course.progressPercent ?? 0}% COMPLETED`}
-                    </span>
+                    {course.prerequisite && (
+                      <div className="flex items-center gap-1 text-[10px] font-bold italic">
+                        {course.status === 'locked' ? (
+                          <span className="material-symbols-outlined text-[14px] text-slate-400">
+                            lock
+                          </span>
+                        ) : (
+                          <span className="material-symbols-outlined text-[14px] text-emerald-500">
+                            check_circle
+                          </span>
+                        )}
+                        <span className="text-slate-500">
+                          Prerequisite: {course.prerequisite.code} {course.prerequisite.title}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 mb-6">
@@ -335,24 +332,20 @@ function LearningPathOverview({ onOpenModule }) {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex-1">
-                    {course.prerequisite && (
-                      <div className="flex items-center gap-1 text-[10px] font-bold italic">
-                        {course.status === 'locked' ? (
-                          <span className="material-symbols-outlined text-[14px] text-slate-400">
-                            lock
-                          </span>
-                        ) : (
-                          <span className="material-symbols-outlined text-[14px] text-emerald-500">
-                            check_circle
-                          </span>
-                        )}
-                        <span className="text-slate-500">
-                          Prerequisite: {course.prerequisite.code} {course.prerequisite.title}
-                        </span>
-                      </div>
-                    )}
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <div className="flex flex-col gap-1 w-1/2">
+                    <div className="flex justify-between text-xs font-bold text-gray-500">
+                      <span>Progress</span>
+                      <span className={course.status === 'locked' ? 'text-slate-400' : 'text-primary'}>
+                        {course.status === 'locked' ? '0%' : `${course.progressPercent ?? 0}%`}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden w-full">
+                      <div
+                        className={`h-full rounded-full ${course.status === 'locked' ? 'bg-slate-400/50' : 'progress-bar-fill'}`}
+                        style={{ width: `${course.status === 'locked' ? 0 : (course.progressPercent ?? 0)}%` }}
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
