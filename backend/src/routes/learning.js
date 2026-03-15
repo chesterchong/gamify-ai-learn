@@ -33,21 +33,40 @@ router.get('/courses', isAuthenticated, async (req, res) => {
 
     // Flatten the structure for easier frontend consumption
     const formattedCourses = courses.map(course => {
-      // Find progress for any module in this course for this user
-      const courseProgress = course.modules.flatMap(m => m.userProgress);
-      // Find if any module is started (not locked)
-      const activeProgress = courseProgress.find(p => p.status !== 'locked');
-      
-      let status = 'available'
-      let progressPercent = 0
-      let grade = null
-      let isPrereqCompleted = true
+      // Collect per-module progress for this user (default 0/available when no row yet)
+      const moduleProgress = course.modules.map((m) => {
+        const p = m.userProgress[0]
+        if (!p) {
+          return { status: 'available', progress: 0, grade: null }
+        }
+        return { status: p.status, progress: p.progress, grade: p.grade ?? null }
+      })
 
-      if (activeProgress) {
-        status = activeProgress.status
-        progressPercent = activeProgress.progress
-        grade = activeProgress.grade
+      const totalModules = moduleProgress.length
+
+      // Aggregate course-level progress as average of module progresses
+      const totalProgress = moduleProgress.reduce((sum, p) => sum + (p.progress || 0), 0)
+      let progressPercent = totalModules > 0 ? Math.round(totalProgress / totalModules) : 0
+
+      // Derive course status from modules
+      let status = 'available'
+      if (totalModules > 0 && moduleProgress.every(p => p.status === 'completed')) {
+        status = 'completed'
+      } else if (moduleProgress.some(p => p.status === 'in-progress' || (p.progress || 0) > 0)) {
+        status = 'in-progress'
       }
+
+      // Use the grade from the "most advanced" module: prefer completed > in-progress > available
+      let grade = null
+      const completedWithGrade = moduleProgress.find(p => p.status === 'completed' && p.grade)
+      const inProgressWithGrade = moduleProgress.find(p => p.status === 'in-progress' && p.grade)
+      if (completedWithGrade) {
+        grade = completedWithGrade.grade
+      } else if (inProgressWithGrade) {
+        grade = inProgressWithGrade.grade
+      }
+
+      let isPrereqCompleted = true
 
       // Enforce prerequisite for all courses that have one, regardless of progress
       if (course.prerequisiteId) {
@@ -122,11 +141,10 @@ router.get('/courses/:courseId/roadmap', isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: 'Course not found' })
     }
 
-    // Check prerequisite for "Data Structures & Algorithms" (BACS2063) - lock if not met
+    // Check prerequisite for any course that has one - lock course and all chapters if not met
     let isLocked = false
-    let prerequisite = null
 
-    if (course.code === 'BACS2063' && course.prerequisiteId) {
+    if (course.prerequisiteId) {
       const prereqCourse = await prisma.course.findUnique({
         where: { id: course.prerequisiteId },
         include: {
@@ -149,13 +167,47 @@ router.get('/courses/:courseId/roadmap', isAuthenticated, async (req, res) => {
 
       if (!isPrereqCompleted) {
         isLocked = true
-        prerequisite = course.prerequisite
-          ? { code: course.prerequisite.code, title: course.prerequisite.title }
-          : null
       }
     }
 
-    // Format the roadmap data (return 200; show locked state in UI)
+    // Build chapter list with status from DB
+    let chapters = course.modules.map(m => {
+      const progress = m.userProgress[0]
+
+      let status = 'available'
+      let progressPercent = 0
+
+      if (progress) {
+        status = progress.status
+        progressPercent = progress.progress
+      }
+
+      // Override all chapter statuses to locked when course prerequisite not met
+      if (isLocked) {
+        status = 'locked'
+      }
+
+      return {
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        status: status,
+        progress: progressPercent,
+        lessons: m.numLessons,
+        problems: m.numProblems
+      }
+    })
+
+    // When course is unlocked (prerequisite met), unlock all chapters that are still marked as locked.
+    // Completed chapters remain completed; only locked ones are turned into available.
+    if (!isLocked && chapters.length > 0) {
+      chapters = chapters.map((ch) =>
+        ch.status === 'locked'
+          ? { ...ch, status: 'available' }
+          : ch
+      )
+    }
+
     const roadmap = {
       course: {
         id: course.id,
@@ -171,32 +223,7 @@ router.get('/courses/:courseId/roadmap', isAuthenticated, async (req, res) => {
           : null,
         isLocked,
       },
-      chapters: course.modules.map(m => {
-        const progress = m.userProgress[0]
-
-        let status = 'available'
-        let progressPercent = 0
-
-        if (progress) {
-          status = progress.status
-          progressPercent = progress.progress
-        }
-
-        // Override all chapter statuses to locked when course prerequisite not met
-        if (isLocked) {
-          status = 'locked'
-        }
-
-        return {
-          id: m.id,
-          title: m.title,
-          description: m.description,
-          status: status,
-          progress: progressPercent,
-          lessons: m.numLessons,
-          problems: m.numProblems
-        }
-      })
+      chapters
     }
 
     res.json(roadmap)

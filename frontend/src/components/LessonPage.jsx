@@ -16,6 +16,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
   const QUIZ_DELIM = '\n---QUIZ---\n'
+  const FALLBACK_OPTIONS = ['All of the above', 'None of the above', 'Not sure', 'Skip for now']
 
   const computeProgress = (lessons, problems) => {
     const items = [...(lessons || []), ...(problems || [])]
@@ -185,6 +186,45 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
   const isCorrect = (idx, correctAnswers) => {
     const user = normalize(answers[idx])
     return correctAnswers.some((a) => normalize(a) === user)
+  }
+
+  const getOptionsForQuestion = (quiz, idx) => {
+    const q = quiz[idx]
+    if (!q) return []
+
+    const corrects = Array.from(
+      new Set((q.answers || []).map((a) => String(a ?? '').trim())),
+    ).filter((a) => a.length > 0)
+
+    let pool = [...corrects]
+
+    // Pull extra candidates from other questions in the same quiz
+    const otherAnswers = quiz.flatMap((qq, i) =>
+      i === idx ? [] : (qq.answers || []).map((a) => String(a ?? '').trim()),
+    )
+    for (const cand of otherAnswers) {
+      if (!cand || pool.includes(cand)) continue
+      pool.push(cand)
+      if (pool.length >= 4) break
+    }
+
+    // If still fewer than 4, pad with generic fallback options that are not correct
+    for (const fb of FALLBACK_OPTIONS) {
+      if (!pool.includes(fb) && !corrects.includes(fb)) {
+        pool.push(fb)
+      }
+      if (pool.length >= 4) break
+    }
+
+    // Ensure at least one correct option is present
+    if (!corrects.length) {
+      // No known correct answer; just return first 4 options
+      return pool.slice(0, 4)
+    }
+
+    // Shuffle options so answer position is randomized per render
+    const shuffled = [...pool].sort(() => Math.random() - 0.5)
+    return shuffled.slice(0, Math.max(4, Math.min(shuffled.length, 6)))
   }
 
   const handleCheckAnswers = () => {
@@ -432,10 +472,14 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
             <section>
               <h2 className="text-lg font-bold text-[#111418] dark:text-white mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">quiz</span>
-                Fill in the blanks
+                Multiple choice quiz
               </h2>
               <div className="space-y-4">
-                {quiz.map((q, idx) => (
+                {quiz.map((q, idx) => {
+                  const options = getOptionsForQuestion(quiz, idx)
+                  const hasOptions = options.length >= 4
+
+                  return (
                   <div
                     key={idx}
                     className={`rounded-xl border p-4 ${
@@ -449,31 +493,55 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
                     <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
                       {q.prompt?.replace(/_____/g, '_____')}
                     </p>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={answers[idx] ?? ''}
-                        onChange={(e) => {
-                          setAnswers((prev) => ({ ...prev, [idx]: e.target.value }))
-                          setChecked((prev) => ({ ...prev, [idx]: undefined }))
-                          setAllCorrect(false)
-                        }}
-                        placeholder="Your answer"
-                        className="flex-1 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111418] text-[#111418] dark:text-white focus:ring-2 focus:ring-primary focus:border-primary"
-                      />
-                      {checked[idx] === true && (
-                        <span className="material-symbols-outlined text-green-500" title="Correct">
-                          check_circle
-                        </span>
-                      )}
-                      {checked[idx] === false && (
-                        <span className="material-symbols-outlined text-red-500" title="Incorrect">
-                          cancel
-                        </span>
-                      )}
-                    </div>
+                    {hasOptions ? (
+                      <div className="space-y-2">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {options.map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => {
+                                  setAnswers((prev) => ({ ...prev, [idx]: opt }))
+                                  setChecked((prev) => ({ ...prev, [idx]: undefined }))
+                                  setAllCorrect(false)
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-lg border text-xs sm:text-sm transition-colors ${
+                                  answers[idx] === opt
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111418] text-[#111418] dark:text-white hover:border-primary/60 hover:bg-primary/5'
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {checked[idx] === true && (
+                            <span
+                              className="material-symbols-outlined text-green-500"
+                              title="Correct"
+                            >
+                              check_circle
+                            </span>
+                          )}
+                          {checked[idx] === false && (
+                            <span
+                              className="material-symbols-outlined text-red-500"
+                              title="Incorrect"
+                            >
+                              cancel
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500">
+                        Quiz options are not available for this question.
+                      </p>
+                    )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
               <button
                 onClick={handleCheckAnswers}
