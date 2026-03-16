@@ -89,7 +89,7 @@ function Layout({ title, children, mainClassName = '' }) {
                   // Ignore logout failures and still clear client state.
                 } finally {
                   await supabase.auth.signOut()
-                  navigate('/login', { replace: true })
+                  navigate('/', { replace: true })
                 }
               }}
               type="button"

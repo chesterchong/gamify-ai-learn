@@ -1,10 +1,54 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GravityStarsBackground } from './animate-ui/components/backgrounds/gravity-stars'
 import GradientText from './GradientText'
+import ShinyText from './ShinyText'
 
 function Home() {
+  // Only show Get Started when we've confirmed the user is not logged in (avoids flash)
+  const [authStatus, setAuthStatus] = useState('idle') // 'idle' | 'authenticated' | 'unauthenticated'
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+
+  useEffect(() => {
+    let isMounted = true
+    const checkAuth = async () => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/auth/me`, { credentials: 'include' })
+        if (isMounted) setAuthStatus(res.ok ? 'authenticated' : 'unauthenticated')
+      } catch {
+        if (isMounted) setAuthStatus('unauthenticated')
+      }
+    }
+    checkAuth()
+    return () => { isMounted = false }
+  }, [apiBaseUrl])
+
   return (
-    <div className="selection:bg-primary selection:text-black relative overflow-hidden min-h-screen">
+    <div className="selection:bg-primary selection:text-black relative overflow-hidden min-h-screen bg-[#030a12]">
+      {/* Nebula + aurora wave light (from home-sample) */}
+      <div
+        className="fixed inset-0 -z-[2]"
+        style={{
+          background: [
+            'radial-gradient(ellipse 100% 80% at 50% 20%, rgba(15, 30, 50, 0.5) 0%, transparent 50%)',
+            'radial-gradient(ellipse 80% 60% at 80% 60%, rgba(10, 25, 45, 0.4) 0%, transparent 45%)',
+            'radial-gradient(ellipse 70% 70% at 20% 80%, rgba(20, 35, 55, 0.35) 0%, transparent 45%)',
+            'linear-gradient(180deg, #030a12 0%, #050b14 50%, #030a12 100%)',
+          ].join(', '),
+          filter: 'brightness(0.85) contrast(1.08)',
+        }}
+        aria-hidden
+      />
+      <div
+        className="fixed inset-0 -z-[1] pointer-events-none"
+        style={{
+          background: [
+            'radial-gradient(circle at 80% 20%, rgba(0, 242, 255, 0.07) 0%, transparent 50%)',
+            'radial-gradient(circle at 20% 80%, rgba(34, 197, 94, 0.06) 0%, transparent 50%)',
+          ].join(', '),
+        }}
+        aria-hidden
+      />
       <style>{`
         :root {
           font-family: 'JetBrains Mono', monospace;
@@ -140,46 +184,88 @@ function Home() {
           opacity: 1;
           filter: grayscale(0);
         }
+        .hero-glass-card {
+          background: rgba(15, 23, 42, 0.18);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        .hero-glass-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: all 0.3s ease;
+        }
+        .hero-glass-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(0, 242, 255, 0.5);
+        }
+        .hero-cyan-glow {
+          color: #00f2ff;
+        }
+        .hero-cyan-text-glow {
+          text-shadow: 0 0 20px rgba(0, 242, 255, 0.25);
+        }
       `}</style>
-      <main className="container mx-auto px-6 py-16 relative z-10">
-        <div className="relative min-h-[60vh]">
+      <main className="container mx-auto px-6 py-16 relative z-10 flex flex-col items-center">
+        <div className="relative min-h-[60vh] w-full max-w-5xl">
           <GravityStarsBackground
             className="pointer-events-none absolute inset-0"
             starsOpacity={0.45}
             glowIntensity={8}
             movementSpeed={0.7}
           />
-          <div className="relative z-10 mt-6">
-            <div className="max-w-3xl hero-fade-up">
-              <Link className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100/5 border border-slate-700/60 mb-8 transition-transform hover:scale-105 cursor-pointer hero-pill-animate" to="/terms">
-                <span className="border border-primary text-primary text-[10px] font-bold px-2 py-0.5 rounded-full transition-all hover:bg-primary hover:text-slate-900">NEW</span>
-                <GradientText className="text-xs font-medium text-slate-300" animationSpeed={6}>
-                  Generative AI mastery path now live
-                </GradientText>
-                <span className="material-symbols-outlined text-xs">chevron_right</span>
-              </Link>
-              <h1 className="text-5xl lg:text-7xl font-bold leading-tight mb-6 hero-serif">
-                <span className="text-primary">CSarena</span>
-                <br />
-                <span className="text-white text-3xl lg:text-5xl">Master the</span>{' '}
-                <span className="italic font-light text-3xl lg:text-5xl">Machine</span>{' '}
-                <span className="text-white text-3xl lg:text-5xl">Intelligence</span>
-              </h1>
-              <p className="text-lg text-white mb-10 max-w-lg leading-relaxed hero-serif">
-                The gamified path to frontier AI and Computer Science. Embark on quests, conquer algorithms, and level up with verifiable skills.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link
-                  className="px-8 py-4 bg-accent-lime text-slate-900 font-bold rounded-xl flex items-center justify-center gap-2 hover:shadow-[0_0_30px_rgba(217,249,157,0.4)] transition-all hover:-translate-y-1 hero-fade-up-delay"
-                  to="/signup"
-                >
-                  <span className="material-symbols-outlined">rocket_launch</span>
-                  Get Started
-                </Link>
+          <div className="relative z-10 mt-6 flex flex-col items-center">
+            <Link
+              className="hero-glass-btn mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs text-gray-300 border-white/10 hero-pill-animate"
+              to="/terms"
+              aria-label="Generative AI mastery path now live"
+            >
+              <span className="hero-cyan-glow" aria-hidden="true">
+                <span className="material-symbols-outlined text-[14px]">campaign</span>
+              </span>
+              <GradientText className="text-xs font-medium" animationSpeed={6}>
+                Generative AI mastery path now live
+              </GradientText>
+              <span className="material-symbols-outlined text-xs">chevron_right</span>
+            </Link>
+            <section
+              className="hero-glass-card w-full max-w-3xl px-8 py-10 md:px-12 md:py-14 rounded-3xl relative overflow-hidden hero-fade-up"
+              aria-labelledby="hero-title"
+            >
+              <div className="absolute top-0 right-0 w-40 h-40 bg-cyan-500/10 blur-[80px] pointer-events-none" aria-hidden />
+              <div className="relative z-10">
+                <h1 id="hero-title" className="text-4xl md:text-5xl font-semibold tracking-tight hero-cyan-glow mb-6 hero-cyan-text-glow">
+                  CSarena
+                </h1>
+                <h2 className="text-2xl md:text-4xl font-light text-white tracking-tight leading-snug mb-8">
+                  Master the <span className="italic hero-cyan-glow font-medium text-inherit">Machine</span> Intelligence
+                </h2>
+                <p className="text-base md:text-lg text-white/80 max-w-xl mb-10 leading-loose">
+                  The gamified path to frontier AI and Computer Science. Embark on quests, conquer algorithms, and level up with verifiable skills.
+                </p>
+                {authStatus === 'unauthenticated' && (
+                  <Link
+                    className="hero-glass-btn inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-white/10 hover:bg-cyan-500/10 transition-all group border-cyan-500/20 shadow-lg shadow-cyan-900/20 text-base font-medium"
+                    to="/signup"
+                  >
+                    <span className="material-symbols-outlined text-white group-hover:text-[#00f2ff] transition-colors" aria-hidden>
+                      rocket_launch
+                    </span>
+                    <ShinyText
+                      text="Get Started"
+                      color="#e2e8f0"
+                      shineColor="#00f2ff"
+                      speed={2.5}
+                      spread={100}
+                      className="font-semibold"
+                    />
+                  </Link>
+                )}
               </div>
-            </div>
+            </section>
           </div>
-          <div className="relative z-10 mt-16">
+          <div className="relative z-10 mt-16 w-full">
             <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-4 text-center">
               Trusted By
             </p>

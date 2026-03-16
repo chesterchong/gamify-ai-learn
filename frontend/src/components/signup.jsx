@@ -421,17 +421,6 @@ function Signup() {
         }
       `}</style>
 
-      <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-background-dark/95 backdrop-blur-sm relative">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link className="flex items-center space-x-4 logo-lock" to="/">
-            <div className="border border-primary px-1.5 py-0.5 text-xs text-primary font-bold">
-              CORE
-            </div>
-            <span className="text-xl font-bold tracking-widest text-white uppercase">CSarena</span>
-          </Link>
-        </div>
-      </header>
-
       <main className="container mx-auto px-6 py-16 relative z-10 min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <GravityStarsBackground
           className="pointer-events-none absolute inset-0"

@@ -35,7 +35,8 @@ function TopNav() {
       await fetch(`${apiBaseUrl}/api/auth/logout`, { method: 'POST', credentials: 'include' })
     } catch (_) {}
     await supabase.auth.signOut()
-    navigate('/login', { replace: true })
+    setStatus('unauthenticated')
+    navigate('/', { replace: true })
   }
 
   const isAuthed = status === 'authenticated'
