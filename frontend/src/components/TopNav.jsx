@@ -106,7 +106,7 @@ function TopNav() {
             </span>
           </Link>
 
-          {/* Center: Glass pill nav */}
+          {/* Center: Glass pill nav (hide completely when not authenticated) */}
           {isAuthed ? (
             <nav className="topnav-pill flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 shrink-0">
               {NAV_ITEMS.map(({ to, label }) => (
@@ -128,14 +128,6 @@ function TopNav() {
                 </NavLink>
               ))}
             </nav>
-          ) : isLoading ? (
-            <div className="topnav-pill flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 shrink-0 opacity-50 pointer-events-none select-none">
-              {NAV_ITEMS.map(({ to, label }) => (
-                <span key={to} className="topnav-link px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium tracking-wider uppercase">
-                  {label}
-                </span>
-              ))}
-            </div>
           ) : (
             <div className="shrink-0" />
           )}
