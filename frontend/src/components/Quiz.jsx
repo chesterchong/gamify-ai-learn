@@ -108,6 +108,14 @@ function Quiz() {
             linear-gradient(0deg, transparent 49.5%, rgba(59, 130, 246, 0.03) 50%, transparent 50.5%);
           background-size: 100px 100px;
         }
+        /* Force dark glass search background so text is always visible in prod */
+        .quiz-search-input {
+          background-color: rgba(15, 23, 42, 0.92);
+          color: #e5e7eb;
+        }
+        .quiz-search-input::placeholder {
+          color: #64748b;
+        }
       `}</style>
       <div className="quiz-glow-line" aria-hidden="true" />
       <div className="quiz-circuit-bg relative">
@@ -120,7 +128,7 @@ function Quiz() {
                     search
                   </span>
                   <input
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl glass border-slate-200/50 dark:border-slate-700/50 focus:ring-primary focus:border-primary dark:text-white transition-all"
+                    className="quiz-search-input w-full pl-10 pr-4 py-2.5 rounded-xl glass border-slate-200/50 dark:border-slate-700/50 focus:ring-primary focus:border-primary transition-all"
                     placeholder="Search quizzes..."
                     type="text"
                     value={searchInput}

@@ -101,6 +101,14 @@ function LearningPathOverview({ onOpenModule }) {
           opacity: 1;
           transform: translateY(0);
         }
+        /* Force dark glass search background so text is always visible in prod */
+        .learn-search-input {
+          background-color: rgba(15, 23, 42, 0.92);
+          color: #e5e7eb;
+        }
+        .learn-search-input::placeholder {
+          color: #64748b;
+        }
       `}</style>
       <div className="glow-line" aria-hidden="true"></div>
       <div className="circuit-bg">
@@ -113,7 +121,7 @@ function LearningPathOverview({ onOpenModule }) {
                   search
                 </span>
                 <input
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl glass border-slate-200/50 dark:border-slate-700/50 focus:ring-primary focus:border-primary dark:text-white transition-all"
+                  className="learn-search-input w-full pl-10 pr-4 py-2.5 rounded-xl glass border-slate-200/50 dark:border-slate-700/50 focus:ring-primary focus:border-primary transition-all"
                   placeholder="Search modules..."
                   type="text"
                   value={searchInput}
