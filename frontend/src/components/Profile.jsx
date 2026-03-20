@@ -108,7 +108,7 @@ function Profile() {
   }
 
   return (
-    <div className="selection:bg-primary selection:text-black min-h-screen">
+    <div className="selection:bg-primary selection:text-black">
       <TermsThemeStyles />
       <style>{`
         ::-webkit-scrollbar {
@@ -124,15 +124,6 @@ function Profile() {
         }
         ::-webkit-scrollbar-thumb:hover {
           background: #4b5563;
-        }
-        @keyframes achievementShine {
-          0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
-          20% { opacity: 1; }
-          80% { opacity: 1; }
-          100% { transform: translateX(200%) skewX(-12deg); opacity: 0; }
-        }
-        .animate-achievement-shine {
-          animation: achievementShine 0.7s ease-out forwards;
         }
       `}</style>
       <section className="relative w-full glass-deep border-b border-slate-800/50 pt-10 pb-20">
@@ -221,7 +212,7 @@ function Profile() {
           </div>
         </div>
       </section>
-      <div className="max-w-6xl mx-auto w-full px-6 md:px-12 lg:px-16 -mt-12 mb-12 relative z-10 flex flex-col gap-8">
+      <div className="max-w-6xl mx-auto w-full px-6 md:px-12 lg:px-16 -mt-12 mb-6 pb-4 relative z-10 flex flex-col gap-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Current Streak */}
           <div className="relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-6 transition-all duration-200 hover:border-orange-500/40 hover:shadow-[0_0_24px_-4px_rgba(249,115,22,0.15)]">
@@ -287,91 +278,6 @@ function Profile() {
             </div>
           </div>
         </div>
-        {/* Recent Achievements */}
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">
-              Recent Achievements
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div
-              className="group relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-4 transition-all duration-300 hover:border-blue-500/40 hover:shadow-[0_0_24px_-4px_rgba(59,130,246,0.35)] hover:-translate-y-1 hover:scale-[1.02]"
-            >
-              <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl" aria-hidden>
-                <div className="absolute inset-0 w-1/2 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-12deg] opacity-0 group-hover:opacity-100 group-hover:animate-achievement-shine" />
-              </div>
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary/70" />
-              <div className="flex gap-3 pl-2 relative z-10">
-                <div className="size-10 shrink-0 rounded-lg bg-primary/15 flex items-center justify-center text-blue-400">
-                  <span className="material-symbols-outlined text-xl">terminal</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-white truncate">CLI Master</h3>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Completed all Bash scripting challenges.</p>
-                  <p className="text-[11px] text-slate-600 mt-2">Earned 2 days ago</p>
-                </div>
-              </div>
-            </div>
-            <div
-              className="group relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-4 transition-all duration-300 hover:border-red-500/40 hover:shadow-[0_0_24px_-4px_rgba(239,68,68,0.35)] hover:-translate-y-1 hover:scale-[1.02]"
-            >
-              <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl" aria-hidden>
-                <div className="absolute inset-0 w-1/2 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-12deg] opacity-0 group-hover:opacity-100 group-hover:animate-achievement-shine" />
-              </div>
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-red-500" />
-              <div className="flex gap-3 pl-2 relative z-10">
-                <div className="size-10 shrink-0 rounded-lg bg-red-500/15 flex items-center justify-center text-red-400">
-                  <span className="material-symbols-outlined text-xl">bug_report</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-white truncate">Bug Hunter</h3>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Fixed 50 syntax errors in the sandbox.</p>
-                  <p className="text-[11px] text-slate-600 mt-2">Earned 5 days ago</p>
-                </div>
-              </div>
-            </div>
-            <div
-              className="group relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-4 transition-all duration-300 hover:border-violet-500/40 hover:shadow-[0_0_24px_-4px_rgba(139,92,246,0.35)] hover:-translate-y-1 hover:scale-[1.02]"
-            >
-              <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl" aria-hidden>
-                <div className="absolute inset-0 w-1/2 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-12deg] opacity-0 group-hover:opacity-100 group-hover:animate-achievement-shine" />
-              </div>
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-violet-500" />
-              <div className="flex gap-3 pl-2 relative z-10">
-                <div className="size-10 shrink-0 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-400">
-                  <span className="material-symbols-outlined text-xl">database</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-white truncate">SQL Ninja</h3>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Optimized 10 queries with indexes.</p>
-                  <p className="text-[11px] text-slate-600 mt-2">Earned 1 week ago</p>
-                </div>
-              </div>
-            </div>
-            <Link
-              to="/learn"
-              className="group relative overflow-hidden rounded-xl glass border border-dashed border-slate-600/70 p-4 transition-all duration-300 hover:border-slate-500 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_0_20px_-4px_rgba(100,116,139,0.2)]"
-            >
-              <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl" aria-hidden>
-                <div className="absolute inset-0 w-1/2 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent skew-x-[-12deg] opacity-0 group-hover:opacity-100 group-hover:animate-achievement-shine" />
-              </div>
-              <div className="flex gap-3 relative z-10">
-                <div className="size-10 shrink-0 rounded-lg bg-slate-700 flex items-center justify-center text-slate-500">
-                  <span className="material-symbols-outlined text-xl">lock</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-white truncate">Recursion King</h3>
-                  <div className="w-full bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
-                    <div className="progress-bar-fill h-full rounded-full transition-[width]" style={{ width: '70%' }} />
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-1">70% complete</p>
-                  <span className="inline-block text-xs font-semibold text-primary mt-2 uppercase tracking-wide">Continue</span>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
         <div className="rounded-xl glass-card border border-slate-700/50 p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <h2 className="text-lg font-bold text-white">
@@ -400,7 +306,7 @@ function Profile() {
               ))}
             </div>
           </div>
-          <div className="flex flex-wrap justify-between gap-2 mt-4 pt-4 border-t border-slate-700/80 text-xs text-slate-500">
+          <div className="flex flex-wrap justify-between gap-2 mt-3 pt-3 border-t border-slate-700/80 text-xs text-slate-500">
             <span>Total: 452 contributions this year</span>
             <span>Longest streak: 12 days</span>
           </div>
