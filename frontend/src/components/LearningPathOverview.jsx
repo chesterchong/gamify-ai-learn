@@ -234,7 +234,7 @@ function LearningPathOverview({ onOpenModule }) {
             ) : null}
           </header>
 
-          <div className="space-y-6 max-w-4xl">
+          <div className="space-y-6 w-full">
             {filteredCourses.map((course) => (
               <div
                 key={course.id}
