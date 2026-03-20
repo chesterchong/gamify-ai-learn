@@ -167,7 +167,9 @@ function Profile() {
               )}
             </div>
             {user.professionalRole && (
-              <p className="text-slate-400 text-lg font-medium mb-6">{user.professionalRole}</p>
+              <p className="text-slate-400 text-lg font-medium mb-6">
+                {user.professionalRole === 'admin' ? 'Admin' : 'Student'}
+              </p>
             )}
             <div className="w-full max-w-lg mb-6">
               <div className="flex justify-between text-sm font-medium text-slate-400 mb-2">

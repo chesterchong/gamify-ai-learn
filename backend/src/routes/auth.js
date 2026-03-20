@@ -11,6 +11,27 @@ const router = Router()
 const PASSWORD_MIN_LENGTH = 8
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const DEFAULT_SUPABASE_AUD = 'authenticated'
+const USER_TYPES = new Set(['admin', 'student'])
+
+const normalizeUserType = (value) => {
+  if (typeof value !== 'string') return null
+  const v = value.trim().toLowerCase()
+  return USER_TYPES.has(v) ? v : null
+}
+
+async function syncUserTypeToSupabaseAuth(supabaseUserId, userType) {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceKey || !supabaseUserId || !userType) return
+
+  const supabase = createClient(supabaseUrl, serviceKey)
+  const { error } = await supabase.auth.admin.updateUserById(supabaseUserId, {
+    user_metadata: { user_type: userType },
+  })
+  if (error) {
+    console.error('[auth] Supabase user_metadata sync failed:', error.message)
+  }
+}
 
 let supabaseJwks = null
 let supabaseIssuer = null
@@ -78,6 +99,7 @@ router.post('/register', async (req, res, next) => {
         email: email.toLowerCase(),
         passwordHash,
         role: 'learner',
+        professionalRole: 'student',
       },
     })
 
@@ -157,6 +179,9 @@ router.post('/supabase', async (req, res, next) => {
 
     let user = await prisma.user.findUnique({ where: { email } })
 
+    const supabaseUserId =
+      typeof payload.sub === 'string' && payload.sub ? payload.sub : null
+
     if (!user) {
       const randomSecret = crypto.randomBytes(32).toString('hex')
       const passwordHash = await bcrypt.hash(randomSecret, 10)
@@ -165,9 +190,21 @@ router.post('/supabase', async (req, res, next) => {
           email,
           passwordHash,
           role: 'learner',
+          professionalRole: 'student',
+          supabaseAuthId: supabaseUserId,
         },
       })
+    } else if (supabaseUserId) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { supabaseAuthId: supabaseUserId },
+      })
     }
+
+    await syncUserTypeToSupabaseAuth(
+      supabaseUserId || user.supabaseAuthId,
+      user.professionalRole,
+    )
 
     req.session.userId = user.id
     req.session.role = user.role
@@ -223,7 +260,17 @@ router.put('/profile', requireAuth, async (req, res, next) => {
       updateData.username = typeof username === 'string' ? username.trim() || null : null
     }
     if (professionalRole !== undefined) {
-      updateData.professionalRole = typeof professionalRole === 'string' ? professionalRole.trim() || null : null
+      const normalized = normalizeUserType(professionalRole)
+      if (
+        typeof professionalRole === 'string' &&
+        professionalRole.trim() !== '' &&
+        normalized === null
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'User type must be admin or student' })
+      }
+      updateData.professionalRole = normalized ?? 'student'
     }
     if (profilePhotoUrl !== undefined) {
       updateData.profilePhotoUrl = typeof profilePhotoUrl === 'string' ? profilePhotoUrl.trim() || null : null
@@ -242,6 +289,8 @@ router.put('/profile', requireAuth, async (req, res, next) => {
       where: { id: req.user.id },
       data: updateData,
     })
+
+    await syncUserTypeToSupabaseAuth(user.supabaseAuthId, user.professionalRole)
 
     return res.json({ user: toSafeUser(user) })
   } catch (error) {

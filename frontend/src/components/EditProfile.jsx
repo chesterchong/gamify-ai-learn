@@ -38,11 +38,12 @@ function EditProfile() {
         setUser(data.user)
         
         // Initialize form data - keep inputs empty, show current values as placeholders
-        // For first-time users, professionalRole will be empty/null, so we'll show "student" as placeholder
+        const userType =
+          data.user.professionalRole === 'admin' ? 'admin' : 'student'
         setFormData({
           fullName: '',
           username: '',
-          professionalRole: '', // Keep empty, show current value or "student" as placeholder
+          professionalRole: userType,
           email: data.user.email || '',
           password: '',
           profilePhotoUrl: data.user.profilePhotoUrl || '',
@@ -122,21 +123,16 @@ function EditProfile() {
     try {
       // Only update fields that have been changed (non-empty)
       // If empty, preserve current values by not including them in the payload
-      // Exception: For first-time users, set professionalRole to "student" if empty
       const updatePayload = {}
-      
+
       if (formData.fullName.trim()) {
         updatePayload.fullName = formData.fullName.trim()
       }
       if (formData.username.trim()) {
         updatePayload.username = formData.username.trim()
       }
-      if (formData.professionalRole.trim()) {
-        updatePayload.professionalRole = formData.professionalRole.trim()
-      } else if (!user?.professionalRole) {
-        // If field is empty and user doesn't have a role yet (first-time user), set to "student"
-        updatePayload.professionalRole = 'student'
-      }
+      updatePayload.professionalRole =
+        formData.professionalRole === 'admin' ? 'admin' : 'student'
       if (formData.profilePhotoUrl) {
         updatePayload.profilePhotoUrl = formData.profilePhotoUrl
       }
@@ -320,18 +316,19 @@ function EditProfile() {
                   </label>
                   <label className="flex flex-col gap-2 md:col-span-2">
                     <span className="text-xs uppercase tracking-widest text-slate-400">
-                      Professional Role
+                      User Type
                     </span>
-                    <input
+                    <select
                       name="professionalRole"
                       value={formData.professionalRole}
                       onChange={handleInputChange}
-                      className="h-11 rounded-lg bg-[#162235] border border-[#23354d] px-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/60"
-                      placeholder={user?.professionalRole || 'student'}
-                    />
+                      className="h-11 rounded-lg bg-[#162235] border border-[#23354d] px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    >
+                      <option value="student">Student</option>
+                      <option value="admin">Admin</option>
+                    </select>
                     <span className="text-[11px] text-slate-500">
-                      Enter your role
-
+                      Account type: admin or student only
                     </span>
                   </label>
                 </div>

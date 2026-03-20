@@ -8,6 +8,7 @@ import Learn from './components/Learn.jsx'
 import Profile from './components/Profile.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Quiz from './components/Quiz.jsx'
+import QuizUpload from './components/QuizUpload.jsx'
 import Terms from './components/Terms.jsx'
 import Signup from './components/signup.jsx'
 import Dash from './components/dash.jsx'
@@ -49,6 +50,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Quiz />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/quiz/upload"
+          element={
+            <ProtectedRoute>
+              <QuizUpload />
             </ProtectedRoute>
           }
         />

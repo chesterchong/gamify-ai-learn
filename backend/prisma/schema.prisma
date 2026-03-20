@@ -20,14 +20,16 @@ model User {
   lastActiveDate   DateTime?
   fullName         String?
   username         String?  @unique
-  professionalRole String?
+  professionalRole String   @default("student")
+  supabaseAuthId   String?  @unique
   profilePhotoUrl  String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   // Relations
-  moduleProgress   UserModuleProgress[]
-  lessonProgress   UserLessonProgress[]
+  moduleProgress     UserModuleProgress[]
+  lessonProgress     UserLessonProgress[]
+  quizImportBatches  QuizImportBatch[]
 }
 
 model Course {
@@ -120,6 +122,26 @@ model UserLessonProgress {
   completedAt DateTime?
   
   @@unique([userId, lessonId])
+}
+
+// Admin quiz import: batch + files on disk (paths in relativePath)
+model QuizImportBatch {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseNote String?  @db.Text
+  createdAt  DateTime @default(now())
+  files      QuizImportFile[]
+}
+
+model QuizImportFile {
+  id           String          @id @default(cuid())
+  batchId      String
+  batch        QuizImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  originalName String
+  mimeType     String
+  size         Int
+  relativePath String
 }
 
 // Session table created by connect-pg-simple for Express sessions

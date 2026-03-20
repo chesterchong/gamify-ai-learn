@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { clearMeCache, writeMeCache } from '../lib/authMeCache.js'
 import supabase from '../lib/supabase'
 
 const NAV_ITEMS = [
@@ -20,9 +21,17 @@ function TopNav() {
       try {
         const response = await fetch(`${apiBaseUrl}/api/auth/me`, { credentials: 'include' })
         if (!isMounted) return
-        setStatus(response.ok ? 'authenticated' : 'unauthenticated')
+        if (response.ok) {
+          const data = await response.json().catch(() => ({}))
+          if (data.user) writeMeCache(data.user)
+          setStatus('authenticated')
+        } else {
+          clearMeCache()
+          setStatus('unauthenticated')
+        }
       } catch {
         if (!isMounted) return
+        clearMeCache()
         setStatus('unauthenticated')
       }
     }
@@ -35,6 +44,7 @@ function TopNav() {
       await fetch(`${apiBaseUrl}/api/auth/logout`, { method: 'POST', credentials: 'include' })
     } catch (_) {}
     await supabase.auth.signOut()
+    clearMeCache()
     setStatus('unauthenticated')
     navigate('/', { replace: true })
   }

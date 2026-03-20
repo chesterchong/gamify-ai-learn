@@ -6,6 +6,7 @@ import pg from 'pg'
 import pgSession from 'connect-pg-simple'
 import authRouter from './routes/auth.js'
 import learningRouter from './routes/learning.js'
+import quizRouter from './routes/quiz.js'
 import { getDatabaseUrl } from './db/databaseUrl.js'
 import prisma from './db/prisma.js'
 
@@ -68,6 +69,7 @@ app.get('/health/db', async (req, res) => {
 
 app.use('/api/auth', authRouter)
 app.use('/api/learning', learningRouter)
+app.use('/api/quiz', quizRouter)
 
 // Pre-warm Supabase JWKS so first OAuth login doesn't wait on remote fetch
 const supabaseUrl = process.env.SUPABASE_URL
