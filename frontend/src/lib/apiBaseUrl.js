@@ -9,7 +9,9 @@
 export function getApiBaseUrl() {
   const fromEnv = import.meta.env.VITE_API_URL
   if (typeof fromEnv === 'string' && fromEnv.trim() !== '') {
-    return fromEnv.replace(/\/+$/, '')
+    let base = fromEnv.trim().replace(/\/+$/, '')
+    if (base.endsWith('/api')) base = base.slice(0, -4)
+    return base
   }
   if (import.meta.env.DEV) {
     return 'http://localhost:4000'

@@ -308,7 +308,16 @@ function Signup() {
       await response.json()
       navigate('/dash')
     } catch (err) {
-      setError(err.message || 'Something went wrong')
+      const msg = err.message || 'Something went wrong'
+      const isNetwork =
+        msg === 'Failed to fetch' ||
+        msg.includes('NetworkError') ||
+        msg.includes('Load failed')
+      setError(
+        isNetwork
+          ? `${msg} — check that VITE_API_URL matches your API and the API allows this site (CORS).`
+          : msg,
+      )
     } finally {
       setIsSubmitting(false)
     }

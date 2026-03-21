@@ -145,7 +145,10 @@ router.post('/register', async (req, res, next) => {
 
     req.session.userId = user.id
     req.session.role = user.role
-    return res.status(201).json({ user: toSafeUser(user) })
+    req.session.save((saveErr) => {
+      if (saveErr) return next(saveErr)
+      return res.status(201).json({ user: toSafeUser(user) })
+    })
   } catch (error) {
     return next(error)
   }
@@ -178,7 +181,10 @@ router.post('/login', async (req, res, next) => {
 
     req.session.userId = user.id
     req.session.role = user.role
-    return res.json({ user: toSafeUser(user) })
+    req.session.save((saveErr) => {
+      if (saveErr) return next(saveErr)
+      return res.json({ user: toSafeUser(user) })
+    })
   } catch (error) {
     return next(error)
   }
@@ -252,7 +258,10 @@ router.post('/supabase', async (req, res, next) => {
 
     req.session.userId = user.id
     req.session.role = user.role
-    return res.json({ user: toSafeUser(user) })
+    req.session.save((saveErr) => {
+      if (saveErr) return next(saveErr)
+      return res.json({ user: toSafeUser(user) })
+    })
   } catch (error) {
     console.error('[auth/supabase]', error?.message || error)
     return next(error)
@@ -353,11 +362,19 @@ router.put('/profile', requireAuth, async (req, res, next) => {
 })
 
 router.post('/logout', (req, res, next) => {
+  const sessionCookiesCrossSite =
+    process.env.NODE_ENV === 'production' ||
+    process.env.SESSION_CROSS_SITE_COOKIES === 'true'
   req.session.destroy((error) => {
     if (error) {
       return next(error)
     }
-    res.clearCookie('connect.sid')
+    res.clearCookie('connect.sid', {
+      path: '/',
+      httpOnly: true,
+      sameSite: sessionCookiesCrossSite ? 'none' : 'lax',
+      secure: sessionCookiesCrossSite,
+    })
     return res.json({ ok: true })
   })
 })
