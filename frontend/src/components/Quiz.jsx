@@ -662,7 +662,7 @@ function Quiz() {
               className="glass-card rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto"
               data-purpose="quiz-log"
             >
-              <div className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-[10px] sm:text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
+              <div className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
                 <div className="w-10 text-left">Id</div>
                 <div className="min-w-0">Code</div>
                 <div className="min-w-0">Course</div>
@@ -670,7 +670,7 @@ function Quiz() {
                 <div className="text-right">Action</div>
               </div>
               {isAdmin && rowActionError && (
-                <div className="px-6 py-2 text-[11px] text-amber-400 border-b border-slate-200/50 dark:border-slate-700/50 bg-amber-500/5">
+                <div className="px-6 py-2 text-xs text-amber-400 border-b border-slate-200/50 dark:border-slate-700/50 bg-amber-500/5">
                   {rowActionError}
                 </div>
               )}
@@ -719,7 +719,7 @@ function Quiz() {
                         type="button"
                         onClick={openAdminFilePicker}
                         disabled={adminUploading}
-                        className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide border px-2.5 py-1.5 rounded-lg shrink-0 text-primary border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 cursor-pointer transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide border px-2.5 py-1.5 rounded-lg shrink-0 text-primary border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 cursor-pointer transition-colors disabled:opacity-50"
                         title={`Choose up to ${MAX_ADMIN_FILES} files (stored in Supabase when you click Add)`}
                         aria-label="Choose files to upload"
                       >
@@ -863,7 +863,7 @@ function Quiz() {
                               type="button"
                               onClick={saveEdit}
                               disabled={rowDisabled || batchGenerate.loading}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-emerald-400 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-400 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
                             >
                               {busySave ? '…' : 'Save'}
                             </button>
@@ -871,7 +871,7 @@ function Quiz() {
                               type="button"
                               onClick={cancelEdit}
                               disabled={rowDisabled}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 border border-slate-500/40 hover:bg-slate-500/10 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 border border-slate-500/40 hover:bg-slate-500/10 transition-colors disabled:opacity-50"
                             >
                               Cancel
                             </button>
@@ -882,7 +882,7 @@ function Quiz() {
                               type="button"
                               onClick={() => handleGenerateBatch(row.batchId)}
                               disabled={batchGenerate.loading}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors disabled:opacity-50"
                               aria-label={`Generate quiz from import batch ${row.batchId}`}
                             >
                               <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
@@ -894,7 +894,7 @@ function Quiz() {
                               type="button"
                               onClick={() => startEditImport(row)}
                               disabled={rowDisabled || batchGenerate.loading}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-300 border border-slate-500/50 bg-slate-500/10 hover:bg-slate-500/20 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 border border-slate-500/50 bg-slate-500/10 hover:bg-slate-500/20 transition-colors disabled:opacity-50"
                               aria-label={`Edit import ${row.batchId}`}
                             >
                               <span className="material-symbols-outlined text-[14px]">edit</span>
@@ -904,7 +904,7 @@ function Quiz() {
                               type="button"
                               onClick={() => deleteImportBatch(row.batchId)}
                               disabled={rowDisabled || batchGenerate.loading}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-red-400 border border-red-500/40 bg-red-500/5 hover:bg-red-500/15 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-red-400 border border-red-500/40 bg-red-500/5 hover:bg-red-500/15 transition-colors disabled:opacity-50"
                               aria-label={`Delete import ${row.batchId}`}
                             >
                               <span className="material-symbols-outlined text-[14px]">delete</span>
@@ -1009,7 +1009,7 @@ function Quiz() {
                               type="button"
                               onClick={saveEdit}
                               disabled={rowDisabled}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-emerald-400 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-400 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
                             >
                               {busySave ? '…' : 'Save'}
                             </button>
@@ -1017,7 +1017,7 @@ function Quiz() {
                               type="button"
                               onClick={cancelEdit}
                               disabled={rowDisabled}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 border border-slate-500/40 hover:bg-slate-500/10 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 border border-slate-500/40 hover:bg-slate-500/10 transition-colors disabled:opacity-50"
                             >
                               Cancel
                             </button>
@@ -1028,7 +1028,7 @@ function Quiz() {
                             {isAdmin && (
                               <Link
                                 to={`/quiz/ai/${row.collectionId}`}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
                                 aria-label={`View AI quiz ${row.collectionId}`}
                               >
                                 <span className="material-symbols-outlined text-[14px]">visibility</span>
@@ -1037,12 +1037,12 @@ function Quiz() {
                             )}
                             <Link
                               to={`/quiz/run/${row.collectionId}`}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
-                              aria-label={`Run AI quiz ${row.collectionId}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
+                              aria-label={`Start AI quiz ${row.collectionId}`}
                               data-purpose="ai-quiz-run"
                             >
                               <span className="material-symbols-outlined text-[14px]">play_arrow</span>
-                              Run
+                              Start
                             </Link>
                             {isAdmin && (
                               <>
@@ -1050,7 +1050,7 @@ function Quiz() {
                                   type="button"
                                   onClick={() => startEditAi(row)}
                                   disabled={rowDisabled}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-300 border border-slate-500/50 bg-slate-500/10 hover:bg-slate-500/20 transition-colors disabled:opacity-50"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 border border-slate-500/50 bg-slate-500/10 hover:bg-slate-500/20 transition-colors disabled:opacity-50"
                                   aria-label={`Edit AI quiz ${row.collectionId}`}
                                 >
                                   <span className="material-symbols-outlined text-[14px]">edit</span>
@@ -1060,7 +1060,7 @@ function Quiz() {
                                   type="button"
                                   onClick={() => deleteAiCollection(row.collectionId)}
                                   disabled={rowDisabled}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-red-400 border border-red-500/40 bg-red-500/5 hover:bg-red-500/15 transition-colors disabled:opacity-50"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-red-400 border border-red-500/40 bg-red-500/5 hover:bg-red-500/15 transition-colors disabled:opacity-50"
                                   aria-label={`Delete AI quiz ${row.collectionId}`}
                                 >
                                   <span className="material-symbols-outlined text-[14px]">delete</span>
@@ -1079,7 +1079,7 @@ function Quiz() {
               </div>
               {user && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-3 border-t border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30">
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                     Page {quizPage + 1}
                     {tableLoading ? (
                       <span className="ml-2 text-slate-400">Loading…</span>
@@ -1090,7 +1090,7 @@ function Quiz() {
                       type="button"
                       disabled={quizPage === 0 || tableLoading}
                       onClick={() => setQuizPage((p) => Math.max(0, p - 1))}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-slate-300 border border-slate-500/50 bg-slate-800/50 hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide text-slate-300 border border-slate-500/50 bg-slate-800/50 hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       Previous
                     </button>
@@ -1098,7 +1098,7 @@ function Quiz() {
                       type="button"
                       disabled={!quizHasMore || tableLoading}
                       onClick={() => setQuizPage((p) => p + 1)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-primary border border-primary/45 bg-primary/10 hover:bg-primary/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide text-primary border border-primary/45 bg-primary/10 hover:bg-primary/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       Next
                     </button>
