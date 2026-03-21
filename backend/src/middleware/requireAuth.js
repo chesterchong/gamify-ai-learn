@@ -3,7 +3,11 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Not authenticated' })
   }
 
-  req.user = { id: req.session.userId, role: req.session.role }
+  req.user = {
+    id: req.session.userId,
+    role: req.session.role,
+    professionalRole: req.session.professionalRole,
+  }
   return next()
 }
 

@@ -145,6 +145,7 @@ router.post('/register', async (req, res, next) => {
 
     req.session.userId = user.id
     req.session.role = user.role
+    req.session.professionalRole = user.professionalRole
     req.session.save((saveErr) => {
       if (saveErr) return next(saveErr)
       return res.status(201).json({ user: toSafeUser(user) })
@@ -181,6 +182,7 @@ router.post('/login', async (req, res, next) => {
 
     req.session.userId = user.id
     req.session.role = user.role
+    req.session.professionalRole = user.professionalRole
     req.session.save((saveErr) => {
       if (saveErr) return next(saveErr)
       return res.json({ user: toSafeUser(user) })
@@ -258,6 +260,7 @@ router.post('/supabase', async (req, res, next) => {
 
     req.session.userId = user.id
     req.session.role = user.role
+    req.session.professionalRole = user.professionalRole
     req.session.save((saveErr) => {
       if (saveErr) return next(saveErr)
       return res.json({ user: toSafeUser(user) })

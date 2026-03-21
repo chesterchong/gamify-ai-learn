@@ -72,6 +72,49 @@ function codeChipClassForCourseCode(code) {
   return CODE_STATUS_CHIP_PALETTE[h % CODE_STATUS_CHIP_PALETTE.length]
 }
 
+/** Row has a real course code (not placeholder em dash). */
+function courseCodeIsFilterable(code) {
+  const c = String(code || '').trim().toUpperCase()
+  return c.length > 0 && c !== '—'
+}
+
+function rowCourseCodeKey(row) {
+  if (row.kind === 'import') return importRowCodeTitle(row).code
+  return aiRowCode(row)
+}
+
+function QuizCourseCodeChip({ code, activeFilter, onToggle }) {
+  const normalized = String(code || '').trim().toUpperCase()
+  const filterable = courseCodeIsFilterable(normalized)
+  const baseChip = `text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate select-text ${codeChipClassForCourseCode(code)}`
+  const isActive = activeFilter != null && activeFilter === normalized
+  if (!filterable) {
+    return (
+      <span className={baseChip} title="Course code">
+        {code}
+      </span>
+    )
+  }
+  return (
+    <button
+      type="button"
+      className={`${baseChip} cursor-pointer text-left hover:brightness-110 dark:hover:brightness-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
+        isActive ? 'ring-2 ring-inset ring-primary/50' : ''
+      }`}
+      onClick={() => onToggle(normalized)}
+      title="Show only quizzes with this course code on this page. Click again to clear the filter."
+      aria-pressed={isActive}
+      aria-label={
+        isActive
+          ? `Clear course code filter (${normalized})`
+          : `Filter table by course code ${normalized}`
+      }
+    >
+      {code}
+    </button>
+  )
+}
+
 /** Compact file count e.g. [3]; tooltip lists original names (one per line). */
 function fileCountDisplay(files) {
   const list = Array.isArray(files) ? files : []
@@ -100,6 +143,8 @@ function sortQuizTableRows(rows) {
 
 function Quiz() {
   const [searchInput, setSearchInput] = useState('')
+  /** Uppercase course code; show only rows with this exact code (current table page). */
+  const [courseCodeFilter, setCourseCodeFilter] = useState(null)
   const [user, setUser] = useState(() => {
     const c = readMeCache()
     return c ? { role: c.role, professionalRole: c.professionalRole } : null
@@ -128,11 +173,65 @@ function Quiz() {
   /** `'save:import:id'` | `'delete:import:id'` | same for `ai` */
   const [rowBusy, setRowBusy] = useState(null)
   const [rowActionError, setRowActionError] = useState('')
+  /** After a successful /me in this session, pagination only refetches the table (overlaps network with first load). */
+  const hasSyncedMeRef = useRef(false)
+  const userRef = useRef(user)
+  userRef.current = user
+
+  useEffect(() => {
+    hasSyncedMeRef.current = false
+  }, [apiBaseUrl])
 
   useEffect(() => {
     let mounted = true
-    const load = async () => {
+    const tableUrl = `${apiBaseUrl}/api/quiz/table?page=${quizPage}&limit=${QUIZ_PAGE_SIZE}`
+    const tableOpts = { credentials: 'include', cache: 'no-store' }
+
+    const applyTableJson = (td) => {
+      setQuizRows(Array.isArray(td.rows) ? td.rows : [])
+      setQuizHasMore(Boolean(td.hasMore))
+      if (typeof td.totalImportCount === 'number') {
+        setTotalImportCount(td.totalImportCount)
+      }
+    }
+
+    const run = async () => {
+      if (hasSyncedMeRef.current) {
+        if (!userRef.current) {
+          setQuizPage(0)
+          setQuizRows([])
+          setQuizHasMore(false)
+          setTotalImportCount(0)
+          setTableLoading(false)
+          return
+        }
+        setTableLoading(true)
+        try {
+          const res = await fetch(tableUrl, tableOpts)
+          if (!mounted) return
+          if (res.status === 401) {
+            hasSyncedMeRef.current = false
+            clearMeCache()
+            setUser(null)
+            setQuizRows([])
+            setQuizHasMore(false)
+            setTotalImportCount(0)
+            return
+          }
+          if (!res.ok) return
+          const td = await res.json().catch(() => ({}))
+          applyTableJson(td)
+        } catch {
+          if (mounted) setQuizRows([])
+        } finally {
+          if (mounted) setTableLoading(false)
+        }
+        return
+      }
+
+      setTableLoading(true)
       try {
+        const tableP = fetch(tableUrl, tableOpts)
         const meRes = await fetch(`${apiBaseUrl}/api/auth/me`, {
           credentials: 'include',
           cache: 'no-store',
@@ -141,7 +240,7 @@ function Quiz() {
 
         let nextUser = null
         if (meRes.ok) {
-          const data = await meRes.json()
+          const data = await meRes.json().catch(() => ({}))
           nextUser = data.user || null
           if (nextUser) writeMeCache(nextUser)
           else clearMeCache()
@@ -149,57 +248,60 @@ function Quiz() {
           clearMeCache()
         }
         setUser(nextUser)
+        setAuthChecked(true)
+
+        if (!nextUser) {
+          hasSyncedMeRef.current = false
+          try {
+            await tableP
+          } catch {
+            /* ignore */
+          }
+          setQuizPage(0)
+          setQuizRows([])
+          setQuizHasMore(false)
+          setTotalImportCount(0)
+          setTableLoading(false)
+          return
+        }
+
+        hasSyncedMeRef.current = true
+
+        const tableRes = await tableP
+        if (!mounted) return
+        if (tableRes.status === 401) {
+          hasSyncedMeRef.current = false
+          clearMeCache()
+          setUser(null)
+          setQuizRows([])
+          setQuizHasMore(false)
+          setTotalImportCount(0)
+          setTableLoading(false)
+          return
+        }
+        if (!tableRes.ok) {
+          setQuizRows([])
+          setTableLoading(false)
+          return
+        }
+        const td = await tableRes.json().catch(() => ({}))
+        applyTableJson(td)
       } catch {
         if (mounted) {
           clearMeCache()
           setUser(null)
+          setQuizRows([])
         }
-      } finally {
-        if (mounted) setAuthChecked(true)
-      }
-    }
-    load()
-    return () => {
-      mounted = false
-    }
-  }, [apiBaseUrl])
-
-  useEffect(() => {
-    if (!authChecked) return
-    if (!user) {
-      setQuizPage(0)
-      setQuizRows([])
-      setQuizHasMore(false)
-      setTotalImportCount(0)
-      setTableLoading(false)
-      return
-    }
-    let mounted = true
-    setTableLoading(true)
-    const load = async () => {
-      try {
-        const res = await fetch(
-          `${apiBaseUrl}/api/quiz/table?page=${quizPage}&limit=${QUIZ_PAGE_SIZE}`,
-          { credentials: 'include', cache: 'no-store' },
-        )
-        if (!mounted || !res.ok) return
-        const td = await res.json().catch(() => ({}))
-        setQuizRows(Array.isArray(td.rows) ? td.rows : [])
-        setQuizHasMore(Boolean(td.hasMore))
-        if (typeof td.totalImportCount === 'number') {
-          setTotalImportCount(td.totalImportCount)
-        }
-      } catch {
-        if (mounted) setQuizRows([])
       } finally {
         if (mounted) setTableLoading(false)
       }
     }
-    load()
+
+    run()
     return () => {
       mounted = false
     }
-  }, [apiBaseUrl, authChecked, user, quizPage])
+  }, [apiBaseUrl, quizPage])
 
   const isAdmin = Boolean(
     user &&
@@ -300,16 +402,36 @@ function Quiz() {
         createdAt: r.createdAt,
         files: Array.isArray(r.sourceFiles) ? r.sourceFiles : [],
         userHasPerfectScore: Boolean(r.userHasPerfectScore),
+        /** `null` if API omitted the field (legacy); boolean once backend sends it. */
+        userHasAttempted:
+          typeof r.userHasAttempted === 'boolean' ? r.userHasAttempted : null,
         hasGeneratedQuiz: true,
       }
     })
   }, [quizRows, quizPage])
 
+  useEffect(() => {
+    if (courseCodeFilter != null) {
+      setQuizPage(0)
+    }
+  }, [courseCodeFilter])
+
+  const toggleCourseCodeFilter = useCallback((normalizedCode) => {
+    const c = String(normalizedCode || '').trim().toUpperCase()
+    if (!courseCodeIsFilterable(c)) return
+    setCourseCodeFilter((prev) => (prev === c ? null : c))
+  }, [])
+
   const normalizedQuery = searchInput.trim().toLowerCase()
   const visibleTableRows = useMemo(() => {
+    const byCourse =
+      courseCodeFilter == null
+        ? tableRows
+        : tableRows.filter((row) => rowCourseCodeKey(row) === courseCodeFilter)
+
     const filtered = !normalizedQuery
-      ? tableRows
-      : tableRows.filter((row) => {
+      ? byCourse
+      : byCourse.filter((row) => {
       if (row.kind === 'import') {
         const { code: rowCode, title: rowTitle } = importRowCodeTitle(row)
         const note = (row.courseNote || '').toLowerCase()
@@ -365,7 +487,7 @@ function Quiz() {
       return false
     })
     return sortQuizTableRows(filtered)
-  }, [tableRows, normalizedQuery])
+  }, [tableRows, normalizedQuery, courseCodeFilter])
 
   const openAdminFilePicker = () => {
     setAdminUploadMessage('')
@@ -625,14 +747,40 @@ function Quiz() {
         .quiz-admin-course-input::placeholder {
           color: #64748b;
         }
+        @keyframes quiz-title-new-glow {
+          0%,
+          100% {
+            text-shadow:
+              0 0 3px rgba(34, 211, 238, 0.12),
+              0 0 8px rgba(56, 189, 248, 0.08),
+              0 0 14px rgba(14, 165, 233, 0.05);
+          }
+          50% {
+            text-shadow:
+              0 0 6px rgba(34, 211, 238, 0.28),
+              0 0 12px rgba(56, 189, 248, 0.16),
+              0 0 20px rgba(14, 165, 233, 0.09);
+          }
+        }
+        .quiz-title-never-attempted {
+          animation: quiz-title-new-glow 4.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .quiz-title-never-attempted {
+            animation: none;
+            text-shadow:
+              0 0 4px rgba(34, 211, 238, 0.14),
+              0 0 10px rgba(56, 189, 248, 0.09);
+          }
+        }
       `}</style>
       <div className="quiz-glow-line" aria-hidden="true" />
       <div className="quiz-circuit-bg relative">
         <div className="max-w-5xl mx-auto w-full p-6 lg:p-12 space-y-10 pb-24 relative z-10">
           <header className="mb-10">
             <div className="mt-0 flex flex-col gap-3">
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="relative flex-1">
+              <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                <div className="relative flex-1 min-w-0">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                     search
                   </span>
@@ -645,6 +793,21 @@ function Quiz() {
                     aria-label="Search quizzes"
                   />
                 </div>
+                {courseCodeFilter != null && (
+                  <button
+                    type="button"
+                    onClick={() => setCourseCodeFilter(null)}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-primary border border-primary/45 bg-primary/10 hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors"
+                    aria-label={`Clear course code filter ${courseCodeFilter}`}
+                  >
+                    <span className="truncate max-w-[12rem]" title={courseCodeFilter}>
+                      Code: {courseCodeFilter}
+                    </span>
+                    <span className="material-symbols-outlined text-[16px] shrink-0" aria-hidden>
+                      close
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </header>
@@ -720,14 +883,14 @@ function Quiz() {
                         type="button"
                         onClick={openAdminFilePicker}
                         disabled={adminUploading}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide border px-2.5 py-1.5 rounded-lg shrink-0 text-primary border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 cursor-pointer transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wide border px-2.5 py-1.5 rounded-lg shrink-0 text-primary border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 cursor-pointer transition-colors disabled:opacity-50"
                         title={`Choose up to ${MAX_ADMIN_FILES} files (stored in Supabase when you click Add)`}
                         aria-label="Choose files to upload"
                       >
                         <span className="material-symbols-outlined text-[14px]" aria-hidden>
                           upload_file
                         </span>
-                        {!adminUploadMessage.startsWith('Saved') && 'UPLOAD'}
+                        {!adminUploadMessage.startsWith('Saved') && 'Upload'}
                       </button>
                       {adminFiles.length > 0 && (
                         <ul className="text-[10px] text-slate-400 space-y-1 max-w-full">
@@ -814,12 +977,11 @@ function Quiz() {
                             aria-label="Edit course code"
                           />
                         ) : (
-                          <span
-                            className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate ${codeChipClassForCourseCode(importCode)}`}
-                            title="Course code"
-                          >
-                            {importCode}
-                          </span>
+                          <QuizCourseCodeChip
+                            code={importCode}
+                            activeFilter={courseCodeFilter}
+                            onToggle={toggleCourseCodeFilter}
+                          />
                         )}
                       </div>
                       <div
@@ -953,12 +1115,11 @@ function Quiz() {
                             aria-label="Edit course code"
                           />
                         ) : (
-                          <span
-                            className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate ${codeChipClassForCourseCode(aiCode)}`}
-                            title="Course code"
-                          >
-                            {aiCode}
-                          </span>
+                          <QuizCourseCodeChip
+                            code={aiCode}
+                            activeFilter={courseCodeFilter}
+                            onToggle={toggleCourseCodeFilter}
+                          />
                         )}
                       </div>
                       <div
@@ -988,6 +1149,14 @@ function Quiz() {
                             className="inline-block max-w-full truncate font-semibold text-amber-100 drop-shadow-[0_0_10px_rgba(251,191,36,0.45)]"
                             aria-label={`${row.title}. You scored 100% on this quiz at least once.`}
                             data-purpose="ai-quiz-perfect-title"
+                          >
+                            {row.title}
+                          </span>
+                        ) : row.userHasAttempted === false ? (
+                          <span
+                            className="quiz-title-never-attempted inline-block max-w-full truncate font-semibold text-cyan-200/95 dark:text-cyan-100/85"
+                            aria-label={`${row.title}. You have not taken this quiz yet.`}
+                            data-purpose="ai-quiz-never-attempted-title"
                           >
                             {row.title}
                           </span>
@@ -1114,11 +1283,11 @@ function Quiz() {
               visibleTableRows.length === 0 &&
               !tableLoading && (
               <div className="rounded-2xl glass border border-dashed border-slate-300/50 dark:border-slate-600/50 p-6 text-center text-slate-500 dark:text-slate-400">
-                {normalizedQuery
-                  ? 'No quizzes match your search on this page.'
+                {normalizedQuery || courseCodeFilter != null
+                  ? 'No quizzes match your filters on this page.'
                   : quizRows.length === 0
                     ? 'No quizzes yet.'
-                    : 'No quizzes match your search on this page.'}
+                    : 'No quizzes match your filters on this page.'}
               </div>
             )}
           </div>

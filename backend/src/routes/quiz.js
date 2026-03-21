@@ -285,14 +285,20 @@ router.get('/table', requireAuth, async (req, res, next) => {
     )
     const offset = page * limit
 
-    const dbUser = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { role: true, professionalRole: true },
-    })
-    const isAdmin =
-      dbUser &&
-      (String(dbUser.role || '').toLowerCase() === 'admin' ||
-        String(dbUser.professionalRole || '').toLowerCase() === 'admin')
+    const roleStr = String(req.user.role || '').toLowerCase()
+    const profStr = String(req.user.professionalRole || '').toLowerCase()
+    let isAdmin = roleStr === 'admin' || profStr === 'admin'
+    if (!isAdmin && req.session.professionalRole === undefined) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { role: true, professionalRole: true },
+      })
+      isAdmin = Boolean(
+        dbUser &&
+          (String(dbUser.role || '').toLowerCase() === 'admin' ||
+            String(dbUser.professionalRole || '').toLowerCase() === 'admin'),
+      )
+    }
 
     const take = limit + 1
     let combined
@@ -342,7 +348,20 @@ router.get('/table', requireAuth, async (req, res, next) => {
     const importIds = slice.filter((r) => r.kind === 'import').map((r) => r.id)
     const aiIds = slice.filter((r) => r.kind === 'ai').map((r) => r.id)
 
-    const [batches, collections, totalImportCount] = await Promise.all([
+    const submissionAggPromise =
+      aiIds.length > 0
+        ? prisma.$queryRaw`
+        SELECT
+          s."collectionId" AS cid,
+          BOOL_OR(s."totalQuestions" > 0 AND s."score" = s."totalQuestions") AS "hasPerfect"
+        FROM "AiQuizSubmission" s
+        WHERE s."userId" = ${req.user.id}
+          AND s."collectionId" IN (${Prisma.join(aiIds)})
+        GROUP BY s."collectionId"
+      `
+        : Promise.resolve([])
+
+    const [batches, collections, totalImportCount, submissionRows] = await Promise.all([
       importIds.length
         ? prisma.quizImportBatch.findMany({
             where: { id: { in: importIds } },
@@ -371,22 +390,17 @@ router.get('/table', requireAuth, async (req, res, next) => {
           })
         : Promise.resolve([]),
       isAdmin ? prisma.quizImportBatch.count() : Promise.resolve(0),
+      submissionAggPromise,
     ])
 
     const batchById = Object.fromEntries(batches.map((b) => [b.id, b]))
     const collectionById = Object.fromEntries(collections.map((c) => [c.id, c]))
 
-    let perfectCollectionIds = new Set()
-    if (aiIds.length > 0) {
-      const prow = await prisma.$queryRaw`
-        SELECT DISTINCT s."collectionId" AS cid
-        FROM "AiQuizSubmission" s
-        WHERE s."userId" = ${req.user.id}
-          AND s."collectionId" IN (${Prisma.join(aiIds)})
-          AND s."totalQuestions" > 0
-          AND s.score = s."totalQuestions"
-      `
-      perfectCollectionIds = new Set(prow.map((r) => r.cid))
+    const perfectCollectionIds = new Set()
+    const attemptedCollectionIds = new Set()
+    for (const row of submissionRows) {
+      attemptedCollectionIds.add(row.cid)
+      if (row.hasPerfect) perfectCollectionIds.add(row.cid)
     }
 
     const rows = slice
@@ -421,6 +435,7 @@ router.get('/table', requireAuth, async (req, res, next) => {
           questionCount: c._count.questions,
           sourceFiles: c.batch?.files ?? [],
           userHasPerfectScore: perfectCollectionIds.has(c.id),
+          userHasAttempted: attemptedCollectionIds.has(c.id),
         }
       })
       .filter(Boolean)
@@ -461,17 +476,22 @@ router.get('/ai-collections', requireAuth, async (req, res, next) => {
     })
 
     const collectionIds = collections.map((c) => c.id)
-    let perfectCollectionIds = new Set()
+    const perfectCollectionIds = new Set()
+    const attemptedCollectionIds = new Set()
     if (collectionIds.length > 0) {
-      const rows = await prisma.$queryRaw`
-        SELECT DISTINCT s."collectionId" AS cid
+      const aggRows = await prisma.$queryRaw`
+        SELECT
+          s."collectionId" AS cid,
+          BOOL_OR(s."totalQuestions" > 0 AND s."score" = s."totalQuestions") AS "hasPerfect"
         FROM "AiQuizSubmission" s
         WHERE s."userId" = ${req.user.id}
           AND s."collectionId" IN (${Prisma.join(collectionIds)})
-          AND s."totalQuestions" > 0
-          AND s.score = s."totalQuestions"
+        GROUP BY s."collectionId"
       `
-      perfectCollectionIds = new Set(rows.map((r) => r.cid))
+      for (const row of aggRows) {
+        attemptedCollectionIds.add(row.cid)
+        if (row.hasPerfect) perfectCollectionIds.add(row.cid)
+      }
     }
 
     res.set('Cache-Control', 'private, no-store')
@@ -487,6 +507,7 @@ router.get('/ai-collections', requireAuth, async (req, res, next) => {
         questionCount: c._count.questions,
         sourceFiles: c.batch?.files ?? [],
         userHasPerfectScore: perfectCollectionIds.has(c.id),
+        userHasAttempted: attemptedCollectionIds.has(c.id),
       })),
     })
   } catch (err) {

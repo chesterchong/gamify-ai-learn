@@ -8,7 +8,7 @@ import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 /**
  * Desktop quiz row uses lg:h-[calc(100dvh-13.5rem)]:
  * - TopNav ≈ 4.75rem (pt-3 + h-14 + pb-2 in TopNav.jsx)
- * - Above row: py-10 top 2.5rem + back link ~1.75rem + mb-8 2rem ≈ 6.25rem
+ * - Above row: py-10 top 2.5rem + back pill ~2.5rem + mb-8 2rem ≈ 6.75rem
  * - Below row: py-10 bottom 2.5rem
  * Total ≈ 13.5rem (see AppLayout main min-h using 4.75rem for nav)
  */
@@ -288,10 +288,15 @@ function QuizAiRun() {
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10 flex flex-col flex-1 min-h-0">
         <Link
           to="/quiz"
-          className="inline-flex shrink-0 items-center gap-2 text-sm text-primary hover:underline mb-8"
+          className="group mb-8 inline-flex w-fit shrink-0 items-center gap-2.5 rounded-full border border-slate-600/45 bg-slate-950/35 px-3.5 py-2 pl-2.5 text-sm font-medium text-slate-200 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] backdrop-blur-sm transition-[border-color,background-color,color,box-shadow] hover:border-primary/35 hover:bg-slate-900/55 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
-          <span className="material-symbols-outlined text-lg">arrow_back</span>
-          Back to Quiz list
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-600/50 bg-slate-900/70 text-slate-400 transition-[border-color,background-color,color] group-hover:border-primary/40 group-hover:bg-primary/10 group-hover:text-primary"
+            aria-hidden
+          >
+            <span className="material-symbols-outlined text-[20px] leading-none">arrow_back</span>
+          </span>
+          <span className="pr-1">Back to quiz list</span>
         </Link>
 
         {loadError && <p className="text-amber-400 text-sm mb-6 shrink-0">{loadError}</p>}
