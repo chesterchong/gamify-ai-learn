@@ -133,6 +133,7 @@ model QuizImportBatch {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseCode String?
   courseNote String?  @db.Text
   createdAt  DateTime @default(now())
   files      QuizImportFile[]
@@ -147,6 +148,7 @@ model AiQuizCollection {
   batchId    String?
   batch      QuizImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
   title      String
+  courseCode String?
   courseNote String?  @db.Text
   model      String?
   createdAt   DateTime @default(now())

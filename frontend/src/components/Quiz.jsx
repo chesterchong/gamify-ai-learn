@@ -11,7 +11,10 @@ function formatListId(n) {
   return String(clamped).padStart(3, '0')
 }
 
-/** Parse single "Code/Title" field for display (code chip + title). */
+/**
+ * Parse legacy single-field courseNote (combined code + title).
+ * New rows use API fields courseCode + courseNote (title only).
+ */
 function parseCourseFromNote(note) {
   const t = (note || '').trim()
   if (!t) return { code: '—', title: '' }
@@ -27,7 +30,26 @@ function parseCourseFromNote(note) {
   if (words.length >= 2 && /^[A-Za-z0-9]+$/.test(words[0])) {
     return { code: words[0].toUpperCase(), title: words.slice(1).join(' ') }
   }
-  return { code: 'IMPORT', title: t }
+  return { code: '—', title: t }
+}
+
+function importRowCodeTitle(row) {
+  const hasCode = Boolean(row.courseCode && String(row.courseCode).trim())
+  if (hasCode) {
+    return {
+      code: String(row.courseCode).trim().toUpperCase(),
+      title: (row.courseNote || '').trim() || '—',
+    }
+  }
+  const parsed = parseCourseFromNote(row.courseNote)
+  return { code: parsed.code, title: parsed.title || row.courseNote || '—' }
+}
+
+function aiRowCode(row) {
+  if (row.courseCode && String(row.courseCode).trim()) {
+    return String(row.courseCode).trim().toUpperCase()
+  }
+  return parseCourseFromNote(row.courseNote).code
 }
 
 /** Matches STABLE / LEGACY / CRITICAL / NEW_GEN chip styling: colored text + border (no solid fill). */
@@ -70,6 +92,11 @@ function Quiz() {
     loading: false,
     error: '',
   })
+  /** Admin inline edit: import batch or AI collection. */
+  const [editing, setEditing] = useState(null)
+  /** `'save:import:id'` | `'delete:import:id'` | same for `ai` */
+  const [rowBusy, setRowBusy] = useState(null)
+  const [rowActionError, setRowActionError] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -186,11 +213,13 @@ function Quiz() {
       collectionId: c.id,
       displayId: (c.id || '').slice(0, 6).toUpperCase() || '—',
       title: c.title || 'Untitled',
+      courseCode: typeof c.courseCode === 'string' ? c.courseCode : '',
       courseNote: typeof c.courseNote === 'string' ? c.courseNote : '',
       questionCount: typeof c.questionCount === 'number' ? c.questionCount : 0,
       model: c.model || '',
       createdAt: c.createdAt,
       files: Array.isArray(c.sourceFiles) ? c.sourceFiles : [],
+      userHasPerfectScore: Boolean(c.userHasPerfectScore),
     }))
     if (!isAdmin) return aiRows
     const chronological = [...importBatches].sort(
@@ -200,6 +229,7 @@ function Quiz() {
       kind: 'import',
       batchId: b.id,
       displayId: formatListId(1 + index),
+      courseCode: typeof b.courseCode === 'string' ? b.courseCode : '',
       courseNote: typeof b.courseNote === 'string' ? b.courseNote : '',
       files: Array.isArray(b.files) ? b.files : [],
     }))
@@ -212,9 +242,12 @@ function Quiz() {
     if (!normalizedQuery) return tableRows
     return tableRows.filter((row) => {
       if (row.kind === 'import') {
+        const { code: rowCode, title: rowTitle } = importRowCodeTitle(row)
         const note = (row.courseNote || '').toLowerCase()
-        const code = parseCourseFromNote(row.courseNote).code.toLowerCase()
+        const code = rowCode.toLowerCase()
+        const titleStr = (rowTitle || '').toLowerCase()
         const matchesCode = code.includes(normalizedQuery)
+        const matchesTitle = titleStr.includes(normalizedQuery)
         const matchesNote = note.includes(normalizedQuery)
         const matchesFile = row.files.some((f) =>
           (f.originalName || '').toLowerCase().includes(normalizedQuery),
@@ -224,10 +257,17 @@ function Quiz() {
           row.displayId.toLowerCase().includes(normalizedQuery)
         const matchesTag =
           normalizedQuery.length >= 3 && /upload|import|storage/.test(normalizedQuery)
-        return matchesCode || matchesNote || matchesFile || matchesId || matchesTag
+        return (
+          matchesCode ||
+          matchesTitle ||
+          matchesNote ||
+          matchesFile ||
+          matchesId ||
+          matchesTag
+        )
       }
       if (row.kind === 'ai') {
-        const code = parseCourseFromNote(row.courseNote).code.toLowerCase()
+        const code = aiRowCode(row).toLowerCase()
         const matchesCode = code.includes(normalizedQuery)
         const matchesTitle = (row.title || '').toLowerCase().includes(normalizedQuery)
         const matchesNote = (row.courseNote || '').toLowerCase().includes(normalizedQuery)
@@ -238,13 +278,19 @@ function Quiz() {
           (row.collectionId || '').toLowerCase().includes(normalizedQuery) ||
           (row.displayId || '').toLowerCase().includes(normalizedQuery)
         const matchesAi = normalizedQuery === 'ai' || normalizedQuery.includes('gemini')
+        const matchesPerfect =
+          row.userHasPerfectScore &&
+          (normalizedQuery === 'max' ||
+            normalizedQuery === 'perfect' ||
+            normalizedQuery.includes('perfect score'))
         return (
           matchesCode ||
           matchesTitle ||
           matchesNote ||
           matchesFile ||
           matchesId ||
-          matchesAi
+          matchesAi ||
+          matchesPerfect
         )
       }
       return false
@@ -268,6 +314,163 @@ function Quiz() {
     setAdminFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const rowKey = (kind, id) => `${kind}:${id}`
+
+  const isRowBusy = (kind, id, op) =>
+    rowBusy === `${op}:${rowKey(kind, id)}`
+
+  const startEditImport = (row) => {
+    const { code, title } = importRowCodeTitle(row)
+    setRowActionError('')
+    setEditing({
+      kind: 'import',
+      id: row.batchId,
+      code: code === '—' ? '' : code,
+      title: title === '—' ? '' : title,
+    })
+  }
+
+  const startEditAi = (row) => {
+    const code = aiRowCode(row)
+    setRowActionError('')
+    setEditing({
+      kind: 'ai',
+      id: row.collectionId,
+      code: code === '—' ? '' : code,
+      title: (row.title || '').trim(),
+    })
+  }
+
+  const cancelEdit = () => {
+    setEditing(null)
+    setRowActionError('')
+  }
+
+  const saveEdit = async () => {
+    if (!editing) return
+    const title = editing.title.trim()
+    const codeRaw = editing.code.trim()
+    const code = codeRaw ? codeRaw.toUpperCase() : ''
+    if (editing.kind === 'import') {
+      if (!code || !title) {
+        setRowActionError('Code and title are required.')
+        return
+      }
+    } else if (!title) {
+      setRowActionError('Title is required.')
+      return
+    }
+    const key = rowKey(editing.kind, editing.id)
+    setRowBusy(`save:${key}`)
+    setRowActionError('')
+    try {
+      if (editing.kind === 'import') {
+        const res = await fetch(
+          `${apiBaseUrl}/api/quiz/import-batches/${editing.id}`,
+          {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ courseCode: code, courseNote: title }),
+          },
+        )
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setRowActionError(data.error || `Save failed (${res.status})`)
+          return
+        }
+        await loadImportBatches()
+      } else {
+        const res = await fetch(
+          `${apiBaseUrl}/api/quiz/ai-collections/${editing.id}`,
+          {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title,
+              courseCode: code || null,
+            }),
+          },
+        )
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setRowActionError(data.error || `Save failed (${res.status})`)
+          return
+        }
+        await loadAiCollections()
+      }
+      setEditing(null)
+    } catch {
+      setRowActionError('Network error.')
+    } finally {
+      setRowBusy(null)
+    }
+  }
+
+  const deleteImportBatch = async (batchId) => {
+    if (
+      !window.confirm(
+        'Delete this import row and remove its files from storage? Generated AI quizzes stay listed; their link to this batch is cleared.',
+      )
+    ) {
+      return
+    }
+    const key = rowKey('import', batchId)
+    setRowBusy(`delete:${key}`)
+    setRowActionError('')
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/quiz/import-batches/${batchId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setRowActionError(data.error || `Delete failed (${res.status})`)
+        return
+      }
+      if (editing?.kind === 'import' && editing.id === batchId) setEditing(null)
+      await loadImportBatches()
+    } catch {
+      setRowActionError('Network error.')
+    } finally {
+      setRowBusy(null)
+    }
+  }
+
+  const deleteAiCollection = async (collectionId) => {
+    if (
+      !window.confirm(
+        'Delete this AI quiz permanently? All questions and learner submissions for it will be removed.',
+      )
+    ) {
+      return
+    }
+    const key = rowKey('ai', collectionId)
+    setRowBusy(`delete:${key}`)
+    setRowActionError('')
+    try {
+      const res = await fetch(
+        `${apiBaseUrl}/api/quiz/ai-collections/${collectionId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        },
+      )
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setRowActionError(data.error || `Delete failed (${res.status})`)
+        return
+      }
+      if (editing?.kind === 'ai' && editing.id === collectionId) setEditing(null)
+      await loadAiCollections()
+    } catch {
+      setRowActionError('Network error.')
+    } finally {
+      setRowBusy(null)
+    }
+  }
+
   const submitAdminUpload = async () => {
     const codePart = adminCodeDraft.trim()
     const titlePart = adminTitleDraft.trim()
@@ -283,12 +486,12 @@ function Quiz() {
       setAdminUploadMessage('Choose files with the file button, then click Add.')
       return
     }
-    const courseNote = `${codePart} ${titlePart}`
     setAdminUploading(true)
     setAdminUploadMessage('')
     try {
       const fd = new FormData()
-      fd.append('courseNote', courseNote)
+      fd.append('courseCode', codePart)
+      fd.append('courseNote', titlePart)
       adminFiles.forEach((f) => fd.append('files', f))
       const res = await fetch(`${apiBaseUrl}/api/quiz/import-files`, {
         method: 'POST',
@@ -304,6 +507,9 @@ function Quiz() {
         `Saved ${data.fileCount} file(s) to Supabase${data.bucket ? ` (${data.bucket})` : ''}.`,
       )
       setAdminFiles([])
+      setAdminCodeDraft('')
+      setAdminTitleDraft('')
+      if (adminFileInputRef.current) adminFileInputRef.current.value = ''
       await loadImportBatches()
     } catch {
       setAdminUploadMessage('Network error. Try again.')
@@ -386,17 +592,22 @@ function Quiz() {
               className="glass-card rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto"
               data-purpose="quiz-log"
             >
-              <div className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(12rem,1fr)_12rem] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-[10px] sm:text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
+              <div className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-[10px] sm:text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
                 <div className="w-10 text-left">Id</div>
                 <div className="min-w-0">Code</div>
                 <div className="min-w-0">Course</div>
                 <div className="min-w-0">Files</div>
                 <div className="text-right">Action</div>
               </div>
+              {isAdmin && rowActionError && (
+                <div className="px-6 py-2 text-[11px] text-amber-400 border-b border-slate-200/50 dark:border-slate-700/50 bg-amber-500/5">
+                  {rowActionError}
+                </div>
+              )}
               <div className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
                 {isAdmin && (
                   <div
-                    className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(12rem,1fr)_12rem] gap-4 px-6 py-4 items-center bg-primary/5 border-b border-primary/20"
+                    className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center bg-primary/5 border-b border-primary/20"
                     data-purpose="admin-new-quiz-row"
                   >
                     <div className="w-10 text-slate-500 dark:text-slate-400 text-xs tabular-nums select-none" title="Assigned when quiz is created">
@@ -491,10 +702,16 @@ function Quiz() {
                 )}
                 {filteredTableRows.map((row) => {
                   if (row.kind === 'import') {
+                    const { code: importCode, title: importTitle } = importRowCodeTitle(row)
+                    const editingThis =
+                      editing?.kind === 'import' && editing.id === row.batchId
+                    const busySave = isRowBusy('import', row.batchId, 'save')
+                    const busyDel = isRowBusy('import', row.batchId, 'delete')
+                    const rowDisabled = busySave || busyDel
                     return (
                     <div
                       key={`import-${row.batchId}`}
-                      className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(12rem,1fr)_12rem] gap-4 px-6 py-4 items-center transition-colors hover:bg-cyan-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
+                      className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center transition-colors hover:bg-cyan-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
                       data-purpose="quiz-import-batch-row"
                     >
                       <div
@@ -504,15 +721,47 @@ function Quiz() {
                         {row.displayId}
                       </div>
                       <div className="min-w-0 flex items-center">
-                        <span
-                          className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate ${codeChipClassForCourseCode(parseCourseFromNote(row.courseNote).code)}`}
-                          title="Imported batch"
-                        >
-                          {parseCourseFromNote(row.courseNote).code}
-                        </span>
+                        {editingThis ? (
+                          <input
+                            type="text"
+                            value={editing.code}
+                            onChange={(e) =>
+                              setEditing((prev) =>
+                                prev && prev.kind === 'import' && prev.id === row.batchId
+                                  ? { ...prev, code: e.target.value.toUpperCase() }
+                                  : prev,
+                              )
+                            }
+                            className="quiz-admin-course-input w-full text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            aria-label="Edit course code"
+                          />
+                        ) : (
+                          <span
+                            className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate ${codeChipClassForCourseCode(importCode)}`}
+                            title="Course code"
+                          >
+                            {importCode}
+                          </span>
+                        )}
                       </div>
                       <div className="min-w-0 text-xs text-slate-600 dark:text-slate-300 truncate">
-                        {parseCourseFromNote(row.courseNote).title || row.courseNote}
+                        {editingThis ? (
+                          <input
+                            type="text"
+                            value={editing.title}
+                            onChange={(e) =>
+                              setEditing((prev) =>
+                                prev && prev.kind === 'import' && prev.id === row.batchId
+                                  ? { ...prev, title: e.target.value }
+                                  : prev,
+                              )
+                            }
+                            className="quiz-admin-course-input w-full text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            aria-label="Edit course title"
+                          />
+                        ) : (
+                          importTitle
+                        )}
                       </div>
                       <div className="min-w-0 flex flex-col gap-1 items-start">
                         <div className="flex flex-wrap gap-1 justify-start items-center">
@@ -530,28 +779,77 @@ function Quiz() {
                           <p className="text-[10px] text-amber-400 max-w-full">{batchGenerate.error}</p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleGenerateBatch(row.batchId)}
-                          disabled={batchGenerate.loading}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors disabled:opacity-50"
-                          aria-label={`Generate quiz from import batch ${row.batchId}`}
-                        >
-                          <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
-                          {batchGenerate.loading && batchGenerate.batchId === row.batchId
-                            ? '…'
-                            : 'Generate'}
-                        </button>
+                      <div className="text-right flex flex-wrap items-center justify-end gap-1.5">
+                        {editingThis ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={saveEdit}
+                              disabled={rowDisabled || batchGenerate.loading}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-emerald-400 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                            >
+                              {busySave ? '…' : 'Save'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEdit}
+                              disabled={rowDisabled}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 border border-slate-500/40 hover:bg-slate-500/10 transition-colors disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateBatch(row.batchId)}
+                              disabled={batchGenerate.loading}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors disabled:opacity-50"
+                              aria-label={`Generate quiz from import batch ${row.batchId}`}
+                            >
+                              <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                              {batchGenerate.loading && batchGenerate.batchId === row.batchId
+                                ? '…'
+                                : 'Generate'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => startEditImport(row)}
+                              disabled={rowDisabled || batchGenerate.loading}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-300 border border-slate-500/50 bg-slate-500/10 hover:bg-slate-500/20 transition-colors disabled:opacity-50"
+                              aria-label={`Edit import ${row.batchId}`}
+                            >
+                              <span className="material-symbols-outlined text-[14px]">edit</span>
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteImportBatch(row.batchId)}
+                              disabled={rowDisabled || batchGenerate.loading}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-red-400 border border-red-500/40 bg-red-500/5 hover:bg-red-500/15 transition-colors disabled:opacity-50"
+                              aria-label={`Delete import ${row.batchId}`}
+                            >
+                              <span className="material-symbols-outlined text-[14px]">delete</span>
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                     )
                   }
                   if (row.kind === 'ai') {
+                    const aiCode = aiRowCode(row)
+                    const editingThis =
+                      editing?.kind === 'ai' && editing.id === row.collectionId
+                    const busySave = isRowBusy('ai', row.collectionId, 'save')
+                    const busyDel = isRowBusy('ai', row.collectionId, 'delete')
+                    const rowDisabled = busySave || busyDel
                     return (
                     <div
                       key={`ai-${row.collectionId}`}
-                      className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(12rem,1fr)_12rem] gap-4 px-6 py-4 items-center transition-colors hover:bg-violet-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
+                      className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center transition-colors hover:bg-violet-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
                       data-purpose="quiz-ai-collection-row"
                     >
                       <div
@@ -560,16 +858,64 @@ function Quiz() {
                       >
                         {row.displayId}
                       </div>
-                      <div className="min-w-0 flex items-center">
-                        <span
-                          className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate ${codeChipClassForCourseCode(parseCourseFromNote(row.courseNote).code)}`}
-                          title="AI-generated from imports"
-                        >
-                          {parseCourseFromNote(row.courseNote).code}
-                        </span>
+                      <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+                        {editingThis ? (
+                          <input
+                            type="text"
+                            value={editing.code}
+                            onChange={(e) =>
+                              setEditing((prev) =>
+                                prev && prev.kind === 'ai' && prev.id === row.collectionId
+                                  ? { ...prev, code: e.target.value.toUpperCase() }
+                                  : prev,
+                              )
+                            }
+                            className="quiz-admin-course-input min-w-0 flex-1 text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            aria-label="Edit course code"
+                          />
+                        ) : (
+                          <span
+                            className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate ${codeChipClassForCourseCode(aiCode)}`}
+                            title="Course code"
+                          >
+                            {aiCode}
+                          </span>
+                        )}
+                        {row.userHasPerfectScore && (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border border-amber-400/45 text-amber-200 bg-amber-500/[0.12] shadow-[0_0_12px_-4px_rgba(251,191,36,0.35)] shrink-0"
+                            title="You scored 100% on this quiz at least once"
+                            data-purpose="ai-quiz-max-score-badge"
+                          >
+                            <span
+                              className="material-symbols-outlined text-[13px] text-amber-300"
+                              style={{ fontVariationSettings: "'FILL' 1" }}
+                              aria-hidden
+                            >
+                              military_tech
+                            </span>
+                            Max
+                          </span>
+                        )}
                       </div>
                       <div className="min-w-0 text-xs text-slate-600 dark:text-slate-300 truncate">
-                        {row.title}
+                        {editingThis ? (
+                          <input
+                            type="text"
+                            value={editing.title}
+                            onChange={(e) =>
+                              setEditing((prev) =>
+                                prev && prev.kind === 'ai' && prev.id === row.collectionId
+                                  ? { ...prev, title: e.target.value }
+                                  : prev,
+                              )
+                            }
+                            className="quiz-admin-course-input w-full text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            aria-label="Edit quiz title"
+                          />
+                        ) : (
+                          row.title
+                        )}
                       </div>
                       <div className="min-w-0 flex flex-wrap gap-1 justify-start items-center">
                         {row.files.map((f) => (
@@ -586,25 +932,73 @@ function Quiz() {
                         </span>
                       </div>
                       <div className="text-right flex flex-wrap items-center justify-end gap-1.5">
-                        {isAdmin && (
-                          <Link
-                            to={`/quiz/ai/${row.collectionId}`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
-                            aria-label={`View AI quiz ${row.collectionId}`}
-                          >
-                            <span className="material-symbols-outlined text-[14px]">visibility</span>
-                            View
-                          </Link>
+                        {isAdmin && editingThis && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={saveEdit}
+                              disabled={rowDisabled}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-emerald-400 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                            >
+                              {busySave ? '…' : 'Save'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEdit}
+                              disabled={rowDisabled}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 border border-slate-500/40 hover:bg-slate-500/10 transition-colors disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </>
                         )}
-                        <Link
-                          to={`/quiz/run/${row.collectionId}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
-                          aria-label={`Run AI quiz ${row.collectionId}`}
-                          data-purpose="ai-quiz-run"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">play_arrow</span>
-                          Run
-                        </Link>
+                        {!(isAdmin && editingThis) && (
+                          <>
+                            {isAdmin && (
+                              <Link
+                                to={`/quiz/ai/${row.collectionId}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
+                                aria-label={`View AI quiz ${row.collectionId}`}
+                              >
+                                <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                View
+                              </Link>
+                            )}
+                            <Link
+                              to={`/quiz/run/${row.collectionId}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
+                              aria-label={`Run AI quiz ${row.collectionId}`}
+                              data-purpose="ai-quiz-run"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">play_arrow</span>
+                              Run
+                            </Link>
+                            {isAdmin && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditAi(row)}
+                                  disabled={rowDisabled}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-300 border border-slate-500/50 bg-slate-500/10 hover:bg-slate-500/20 transition-colors disabled:opacity-50"
+                                  aria-label={`Edit AI quiz ${row.collectionId}`}
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteAiCollection(row.collectionId)}
+                                  disabled={rowDisabled}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-red-400 border border-red-500/40 bg-red-500/5 hover:bg-red-500/15 transition-colors disabled:opacity-50"
+                                  aria-label={`Delete AI quiz ${row.collectionId}`}
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">delete</span>
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                     )

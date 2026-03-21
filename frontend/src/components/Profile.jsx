@@ -189,6 +189,9 @@ function Profile() {
                   {xpNeeded.toLocaleString()} XP to Level {user.level + 1}
                 </p>
               )}
+              <p className="text-xs text-slate-500 mt-2">
+                Perfect score on an AI quiz adds <span className="text-slate-400 font-medium">+100 XP</span> to your account (each attempt is scored separately).
+              </p>
             </div>
             <div className="flex gap-3">
               <Link

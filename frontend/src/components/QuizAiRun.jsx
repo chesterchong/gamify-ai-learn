@@ -504,6 +504,19 @@ function QuizAiRun() {
                       {submitPayload.score} / {submitPayload.total}
                     </span>
                   </div>
+                  {typeof submitPayload.xpAwarded === 'number' && submitPayload.xpAwarded > 0 && (
+                    <p className="rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200/95">
+                      <span className="font-bold text-emerald-400">+{submitPayload.xpAwarded} XP</span>
+                      {' — '}
+                      perfect score bonus. Your total is now{' '}
+                      <span className="tabular-nums font-semibold text-white">
+                        {typeof submitPayload.xp === 'number'
+                          ? submitPayload.xp.toLocaleString()
+                          : '—'}
+                      </span>
+                      {' XP (see Profile).'}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-500 px-1">
                     {attemptHistory.length} submission{attemptHistory.length === 1 ? '' : 's'} in
                     history

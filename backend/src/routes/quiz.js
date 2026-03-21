@@ -58,6 +58,21 @@ async function downloadImportFileBuffer(supabase, relativePath) {
 }
 
 /**
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {{ relativePath: string }[]} files
+ */
+async function removeImportFilesFromStorage(supabase, files) {
+  for (const f of files) {
+    if (!f?.relativePath) continue
+    const { bucket, objectPath } = splitStoragePath(f.relativePath)
+    const { error } = await supabase.storage.from(bucket).remove([objectPath])
+    if (error) {
+      throw new Error(error.message || 'Storage remove failed')
+    }
+  }
+}
+
+/**
  * GET /api/quiz/import-batches
  * Recent quiz file imports (metadata in DB; blobs in Supabase Storage). Admin only.
  */
@@ -77,8 +92,77 @@ router.get('/import-batches', requireAuth, requireAdmin, async (req, res, next) 
 })
 
 /**
+ * PATCH /api/quiz/import-batches/:batchId
+ * Body: { courseCode, courseNote } (title). Admin only.
+ */
+router.patch('/import-batches/:batchId', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const { batchId } = req.params
+    const courseCode =
+      typeof req.body?.courseCode === 'string' ? req.body.courseCode.trim() : ''
+    const courseNote =
+      typeof req.body?.courseNote === 'string' ? req.body.courseNote.trim() : ''
+    if (!courseCode) {
+      return res.status(400).json({ error: 'Course code is required.' })
+    }
+    if (!courseNote) {
+      return res.status(400).json({ error: 'Course title is required.' })
+    }
+    const updated = await prisma.quizImportBatch.update({
+      where: { id: batchId },
+      data: { courseCode, courseNote },
+      include: { files: { orderBy: { id: 'asc' } } },
+    })
+    return res.json({ batch: updated })
+  } catch (err) {
+    if (err?.code === 'P2025') {
+      return res.status(404).json({ error: 'Import batch not found' })
+    }
+    return next(err)
+  }
+})
+
+/**
+ * DELETE /api/quiz/import-batches/:batchId
+ * Removes Supabase objects, then DB row (cascades QuizImportFile). Admin only.
+ */
+router.delete('/import-batches/:batchId', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const { batchId } = req.params
+    const batch = await prisma.quizImportBatch.findUnique({
+      where: { id: batchId },
+      include: { files: true },
+    })
+    if (!batch) {
+      return res.status(404).json({ error: 'Import batch not found' })
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (supabaseUrl && supabaseKey && batch.files.length > 0) {
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      try {
+        await removeImportFilesFromStorage(supabase, batch.files)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error('[quiz/delete import-batch] storage:', msg)
+        return res.status(502).json({
+          error: 'Failed to remove files from storage',
+          detail: process.env.DEBUG_ERRORS === 'true' ? msg : undefined,
+        })
+      }
+    }
+
+    await prisma.quizImportBatch.delete({ where: { id: batchId } })
+    return res.json({ ok: true })
+  } catch (err) {
+    return next(err)
+  }
+})
+
+/**
  * POST /api/quiz/import-files
- * multipart: files[] (max 10), courseNote required (code/title)
+ * multipart: files[] (max 10), courseCode + courseNote (title) required.
  * Files are stored in Supabase Storage (bucket: SUPABASE_QUIZ_IMPORT_BUCKET or "quiz-imports").
  */
 router.post(
@@ -93,12 +177,19 @@ router.post(
         return res.status(400).json({ error: 'Upload at least one file (max 10).' })
       }
 
+      const courseCode =
+        typeof req.body.courseCode === 'string' ? req.body.courseCode.trim() : ''
       const courseNote =
         typeof req.body.courseNote === 'string' ? req.body.courseNote.trim() : ''
 
+      if (!courseCode) {
+        return res.status(400).json({
+          error: 'Course code is required (Code column).',
+        })
+      }
       if (!courseNote) {
         return res.status(400).json({
-          error: 'Course code and title are required (use Code/Title field).',
+          error: 'Course title is required (Course column).',
         })
       }
 
@@ -120,6 +211,7 @@ router.post(
       const batch = await prisma.quizImportBatch.create({
         data: {
           userId: req.user.id,
+          courseCode,
           courseNote,
         },
       })
@@ -192,16 +284,36 @@ router.get('/ai-collections', requireAuth, async (req, res, next) => {
         },
       },
     })
+
+    const collectionIds = collections.map((c) => c.id)
+    const perfectCollectionIds = new Set()
+    if (collectionIds.length > 0) {
+      const subs = await prisma.aiQuizSubmission.findMany({
+        where: {
+          userId: req.user.id,
+          collectionId: { in: collectionIds },
+        },
+        select: { collectionId: true, score: true, totalQuestions: true },
+      })
+      for (const s of subs) {
+        if (s.totalQuestions > 0 && s.score === s.totalQuestions) {
+          perfectCollectionIds.add(s.collectionId)
+        }
+      }
+    }
+
     return res.json({
       collections: collections.map((c) => ({
         id: c.id,
         title: c.title,
+        courseCode: c.courseCode,
         courseNote: c.courseNote,
         batchId: c.batchId,
         model: c.model,
         createdAt: c.createdAt,
         questionCount: c._count.questions,
         sourceFiles: c.batch?.files ?? [],
+        userHasPerfectScore: perfectCollectionIds.has(c.id),
       })),
     })
   } catch (err) {
@@ -363,38 +475,55 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
       })
     }
 
-    const lifetimeAiQuizSubmissions = await prisma.$transaction(async (tx) => {
-      await tx.aiQuizSubmission.create({
-        data: {
-          userId: req.user.id,
-          collectionId: col.id,
-          score,
-          totalQuestions: col.questions.length,
-          detailJson: {
-            schemaVersion: 1,
+    const totalQuestions = col.questions.length
+    const PERFECT_SCORE_XP = 100
+    const isPerfectScore = totalQuestions > 0 && score === totalQuestions
+    const perfectScoreXpAwarded = isPerfectScore ? PERFECT_SCORE_XP : 0
+
+    const { lifetimeAiQuizSubmissions, xp, xpAwarded } = await prisma.$transaction(
+      async (tx) => {
+        await tx.aiQuizSubmission.create({
+          data: {
             userId: req.user.id,
             collectionId: col.id,
-            collectionTitle: col.title,
-            courseNote: col.courseNote,
-            model: col.model ?? null,
-            submittedAt: new Date().toISOString(),
-            answers: detailAnswers,
+            score,
+            totalQuestions,
+            detailJson: {
+              schemaVersion: 1,
+              userId: req.user.id,
+              collectionId: col.id,
+              collectionTitle: col.title,
+              courseNote: col.courseNote,
+              model: col.model ?? null,
+              submittedAt: new Date().toISOString(),
+              answers: detailAnswers,
+              perfectScoreXpAwarded,
+            },
           },
-        },
-      })
-      const u = await tx.user.update({
-        where: { id: req.user.id },
-        data: { aiQuizSubmissionCount: { increment: 1 } },
-        select: { aiQuizSubmissionCount: true },
-      })
-      return u.aiQuizSubmissionCount
-    })
+        })
+        const u = await tx.user.update({
+          where: { id: req.user.id },
+          data: {
+            aiQuizSubmissionCount: { increment: 1 },
+            ...(isPerfectScore ? { xp: { increment: PERFECT_SCORE_XP } } : {}),
+          },
+          select: { aiQuizSubmissionCount: true, xp: true },
+        })
+        return {
+          lifetimeAiQuizSubmissions: u.aiQuizSubmissionCount,
+          xp: u.xp,
+          xpAwarded: perfectScoreXpAwarded,
+        }
+      },
+    )
 
     return res.status(201).json({
       ok: true,
       score,
-      total: col.questions.length,
+      total: totalQuestions,
       lifetimeAiQuizSubmissions,
+      xp,
+      xpAwarded,
       results: detailAnswers.map((d) => ({
         questionId: d.questionId,
         isCorrect: d.isCorrect,
@@ -430,6 +559,98 @@ router.get(
       }
       return res.json({ collection: col })
     } catch (err) {
+      return next(err)
+    }
+  },
+)
+
+/**
+ * PATCH /api/quiz/ai-collections/:collectionId
+ * Body: optional { title?, courseCode?, courseNote? } — at least one field required.
+ */
+router.patch(
+  '/ai-collections/:collectionId',
+  requireAuth,
+  requireAdmin,
+  async (req, res, next) => {
+    try {
+      const { collectionId } = req.params
+      const body = req.body || {}
+      const data = {}
+      if (typeof body.title === 'string') {
+        const t = body.title.trim()
+        if (!t) return res.status(400).json({ error: 'title cannot be empty' })
+        data.title = t
+      }
+      if (Object.prototype.hasOwnProperty.call(body, 'courseCode')) {
+        if (body.courseCode === null) {
+          data.courseCode = null
+        } else if (typeof body.courseCode === 'string') {
+          data.courseCode = body.courseCode.trim() || null
+        }
+      }
+      if (typeof body.courseNote === 'string') {
+        data.courseNote = body.courseNote.trim() || null
+      }
+      if (Object.keys(data).length === 0) {
+        return res.status(400).json({
+          error: 'Send at least one of: title, courseCode, courseNote',
+        })
+      }
+      const updated = await prisma.aiQuizCollection.update({
+        where: { id: collectionId },
+        data,
+        include: {
+          _count: { select: { questions: true } },
+          batch: {
+            select: {
+              files: {
+                orderBy: { id: 'asc' },
+                select: { id: true, originalName: true },
+              },
+            },
+          },
+        },
+      })
+      return res.json({
+        collection: {
+          id: updated.id,
+          title: updated.title,
+          courseCode: updated.courseCode,
+          courseNote: updated.courseNote,
+          batchId: updated.batchId,
+          model: updated.model,
+          createdAt: updated.createdAt,
+          questionCount: updated._count.questions,
+          sourceFiles: updated.batch?.files ?? [],
+        },
+      })
+    } catch (err) {
+      if (err?.code === 'P2025') {
+        return res.status(404).json({ error: 'Collection not found' })
+      }
+      return next(err)
+    }
+  },
+)
+
+/**
+ * DELETE /api/quiz/ai-collections/:collectionId
+ * Cascades questions and submissions. Admin only.
+ */
+router.delete(
+  '/ai-collections/:collectionId',
+  requireAuth,
+  requireAdmin,
+  async (req, res, next) => {
+    try {
+      const { collectionId } = req.params
+      await prisma.aiQuizCollection.delete({ where: { id: collectionId } })
+      return res.json({ ok: true })
+    } catch (err) {
+      if (err?.code === 'P2025') {
+        return res.status(404).json({ error: 'Collection not found' })
+      }
       return next(err)
     }
   },
@@ -508,11 +729,14 @@ router.post(
         'gemini-2.5-flash'
       let generated
       try {
+        const geminiContext = [batch.courseCode, batch.courseNote]
+          .filter((s) => typeof s === 'string' && s.trim())
+          .join(' — ')
         generated = await generateQuizFromBuffers({
           apiKey,
           modelName: resolvedModel,
           files: buffers,
-          courseNote: batch.courseNote || '',
+          courseNote: geminiContext,
           questionCount,
         })
       } catch (e) {
@@ -530,6 +754,7 @@ router.post(
             userId: req.user.id,
             batchId: batch.id,
             title: generated.title,
+            courseCode: batch.courseCode,
             courseNote: batch.courseNote,
             model: resolvedModel,
             questions: {

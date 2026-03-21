@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
 
@@ -8,12 +8,14 @@ function QuizUpload() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const initialCourse = searchParams.get('course') || ''
-  const [courseNote, setCourseNote] = useState(initialCourse)
+  const [courseCode, setCourseCode] = useState(initialCourse)
+  const [courseTitle, setCourseTitle] = useState('')
   const [files, setFiles] = useState([])
   const [status, setStatus] = useState('idle')
   const [message, setMessage] = useState('')
   const [user, setUser] = useState(null)
   const [authReady, setAuthReady] = useState(false)
+  const fileInputRef = useRef(null)
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
   useEffect(() => {
@@ -54,8 +56,12 @@ function QuizUpload() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!courseNote.trim()) {
-      setMessage('Enter course code and title (Code/Title).')
+    if (!courseCode.trim()) {
+      setMessage('Enter a course code (Code).')
+      return
+    }
+    if (!courseTitle.trim()) {
+      setMessage('Enter a course title (Course).')
       return
     }
     if (files.length === 0) {
@@ -66,7 +72,8 @@ function QuizUpload() {
     setMessage('')
     try {
       const fd = new FormData()
-      fd.append('courseNote', courseNote)
+      fd.append('courseCode', courseCode.trim())
+      fd.append('courseNote', courseTitle.trim())
       files.forEach((f) => fd.append('files', f))
       const res = await fetch(`${apiBaseUrl}/api/quiz/import-files`, {
         method: 'POST',
@@ -130,25 +137,48 @@ function QuizUpload() {
             save them to the database.
           </p>
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2" htmlFor="courseNote">
-                Code / title <span className="text-amber-500/90">(required)</span>
-              </label>
-              <input
-                id="courseNote"
-                type="text"
-                value={courseNote}
-                onChange={(e) => setCourseNote(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-600 text-slate-100 placeholder:text-slate-500 focus:ring-primary focus:border-primary"
-                placeholder="Enter Code/Title"
-                required
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2"
+                  htmlFor="courseCode"
+                >
+                  Code <span className="text-amber-500/90">(required)</span>
+                </label>
+                <input
+                  id="courseCode"
+                  type="text"
+                  value={courseCode}
+                  onChange={(e) => setCourseCode(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-600 text-slate-100 placeholder:text-slate-500 focus:ring-primary focus:border-primary"
+                  placeholder="e.g. BACS1013"
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2"
+                  htmlFor="courseTitle"
+                >
+                  Course <span className="text-amber-500/90">(required)</span>
+                </label>
+                <input
+                  id="courseTitle"
+                  type="text"
+                  value={courseTitle}
+                  onChange={(e) => setCourseTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-600 text-slate-100 placeholder:text-slate-500 focus:ring-primary focus:border-primary"
+                  placeholder="Course title"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2" htmlFor="files">
                 Files (max {MAX_FILES})
               </label>
               <input
+                ref={fileInputRef}
                 id="files"
                 type="file"
                 multiple
