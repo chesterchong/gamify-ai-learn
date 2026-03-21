@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import AppLayout from './components/AppLayout.jsx'
+import SyncDocumentTitle from './components/SyncDocumentTitle.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import EditProfile from './components/EditProfile.jsx'
 import Home from './components/Home.jsx'
@@ -17,6 +18,8 @@ import Dash from './components/dash.jsx'
 
 function App() {
   return (
+    <>
+      <SyncDocumentTitle />
     <Routes>
       <Route path="/login" element={<Signup />} />
       <Route path="/signup" element={<Signup />} />
@@ -97,6 +100,7 @@ function App() {
         />
       </Route>
     </Routes>
+    </>
   )
 }
 

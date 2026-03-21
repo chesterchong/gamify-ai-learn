@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
+import { formatPageTitle } from '../lib/documentTitle.js'
 import { formatEstimatedQuizTime } from '../lib/quizRunUtils.js'
 
 function QuizAiCollection() {
@@ -60,6 +61,12 @@ function QuizAiCollection() {
       m = false
     }
   }, [apiBaseUrl, authReady, isAdmin, collectionId])
+
+  useEffect(() => {
+    document.title = collection?.title
+      ? formatPageTitle(collection.title)
+      : formatPageTitle('Quiz preview')
+  }, [collection?.title, collectionId])
 
   if (!authReady) {
     return (

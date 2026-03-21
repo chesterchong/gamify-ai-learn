@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
+import { formatPageTitle } from '../lib/documentTitle.js'
 import { formatEstimatedQuizTime, shuffleDisplayPermutation } from '../lib/quizRunUtils.js'
 
 /**
@@ -159,6 +160,12 @@ function QuizAiRun() {
     return () => observer.disconnect()
   }, [prepared])
 
+  useEffect(() => {
+    document.title = play?.title
+      ? formatPageTitle(play.title)
+      : formatPageTitle('Take quiz')
+  }, [play?.title, collectionId])
+
   const allAnswered = useMemo(() => {
     if (!prepared?.length) return false
     return prepared.every((p) => typeof selections[p.questionId] === 'number')
@@ -310,7 +317,8 @@ function QuizAiRun() {
                         ? ' border-emerald-500/35 text-emerald-400/90 bg-emerald-500/[0.06]'
                         : ' border-red-500/35 text-red-400/90 bg-red-500/[0.06]'
                     } else if (answered) {
-                      base += ' border-slate-500/40 text-slate-200 bg-white/[0.04]'
+                      base +=
+                        ' border-sky-400/45 bg-sky-500/15 text-sky-100 shadow-[inset_0_0_0_1px_rgba(56,189,248,0.12)]'
                     } else {
                       base +=
                         ' border-slate-700/60 text-slate-500 bg-transparent hover:border-slate-600 hover:text-slate-400'
@@ -347,7 +355,7 @@ function QuizAiRun() {
                       Unanswered
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="h-2 w-2 shrink-0 rounded-sm border border-slate-500/50 bg-white/[0.06]" />
+                      <span className="h-2 w-2 shrink-0 rounded-sm border border-sky-400/50 bg-sky-500/25" />
                       Answered
                     </span>
                     <span className="inline-flex items-center gap-1.5">
