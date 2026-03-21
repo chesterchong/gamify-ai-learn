@@ -243,6 +243,11 @@ function QuizAiRun() {
       }
       setSubmitPayload(data)
       setSubmitted(true)
+      if (typeof data.xpAwarded === 'number' && data.xpAwarded > 0) {
+        window.dispatchEvent(
+          new CustomEvent('gamify-xp-updated', { detail: { xp: data.xp, xpAwarded: data.xpAwarded } }),
+        )
+      }
       await loadHistory()
     } catch {
       setSubmitError('Network error')

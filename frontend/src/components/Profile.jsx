@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import ProfileShareModal from './ProfileShareModal.jsx'
 import TermsThemeStyles from './TermsThemeStyles'
 
+const XP_MILESTONE = 500
+
 function Profile() {
+  const location = useLocation()
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -11,11 +14,13 @@ function Profile() {
   const [courseStats, setCourseStats] = useState({ completed: 0, total: 0 })
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-  useEffect(() => {
-    const fetchUserData = async () => {
+  const loadUser = useCallback(
+    async (opts = { silent: false }) => {
+      if (!opts.silent) setLoading(true)
       try {
         const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
           credentials: 'include',
+          cache: 'no-store',
         })
 
         if (!response.ok) {
@@ -24,15 +29,35 @@ function Profile() {
 
         const data = await response.json()
         setUser(data.user)
+        setError('')
       } catch (err) {
         setError(err.message || 'Failed to load profile data')
       } finally {
-        setLoading(false)
+        if (!opts.silent) setLoading(false)
       }
-    }
+    },
+    [apiBaseUrl],
+  )
 
-    fetchUserData()
-  }, [apiBaseUrl])
+  useEffect(() => {
+    loadUser({ silent: false })
+  }, [loadUser, location.pathname, location.key])
+
+  useEffect(() => {
+    const onFocus = () => loadUser({ silent: true })
+    const onVis = () => {
+      if (document.visibilityState === 'visible') loadUser({ silent: true })
+    }
+    const onXp = () => loadUser({ silent: true })
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('gamify-xp-updated', onXp)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('gamify-xp-updated', onXp)
+    }
+  }, [loadUser])
 
   // Fetch course progress to power "Modules Done" card
   useEffect(() => {
@@ -61,11 +86,11 @@ function Profile() {
     ? `sample.com/u/${user.email.split('@')[0]}` 
     : 'sample.com/u/user'
 
-  // Calculate XP progress (example: 4500/5000 = 90%)
-  const currentXP = user?.xp || 0
-  const xpForNextLevel = 5000 // This could be calculated based on level
-  const xpProgress = Math.min((currentXP / xpForNextLevel) * 100, 100)
-  const xpNeeded = Math.max(xpForNextLevel - currentXP, 0)
+  const currentXP = Number(user?.xp ?? 0)
+  const nextMilestone =
+    currentXP <= 0 ? XP_MILESTONE : Math.ceil((currentXP + 1) / XP_MILESTONE) * XP_MILESTONE
+  const xpProgress = Math.min(100, (currentXP / nextMilestone) * 100)
+  const xpToNextMilestone = Math.max(0, nextMilestone - currentXP)
 
   const modulesDone = courseStats.completed
   const totalModules = courseStats.total || modulesDone || 0
@@ -172,9 +197,49 @@ function Profile() {
               </p>
             )}
             <div className="w-full max-w-lg mb-6">
-              <div className="flex justify-between text-sm font-medium text-slate-400 mb-2">
-                <span>Mastery Progress</span>
-                <span>{currentXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP</span>
+              <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-400">
+                  Mastery Progress
+                  <span className="relative inline-flex group/xphelp">
+                    <button
+                      type="button"
+                      className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-500/55 bg-slate-800/80 px-1 text-[11px] font-bold leading-none text-slate-400 hover:border-primary/45 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-help"
+                      aria-label="How XP works"
+                      aria-describedby="profile-xp-rules-tooltip"
+                    >
+                      ?
+                    </button>
+                    <span
+                      id="profile-xp-rules-tooltip"
+                      role="tooltip"
+                      className="pointer-events-none invisible absolute left-0 top-full z-30 mt-2 w-[min(19rem,calc(100vw-2.5rem))] origin-top-left scale-95 opacity-0 transition-[opacity,transform,visibility] duration-150 group-hover/xphelp:visible group-hover/xphelp:scale-100 group-hover/xphelp:opacity-100 group-focus-within/xphelp:visible group-focus-within/xphelp:scale-100 group-focus-within/xphelp:opacity-100 rounded-lg border border-slate-600/90 bg-slate-950/95 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-200 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md sm:left-1/2 sm:-translate-x-1/2"
+                    >
+                      <span className="block font-bold text-slate-100 mb-1.5">XP rules</span>
+                      <span className="block text-slate-300">
+                        Perfect score on an AI quiz (every question correct) adds{' '}
+                        <span className="font-semibold text-amber-200/95">+100 XP</span>. Each
+                        qualifying attempt counts separately.
+                      </span>
+                      <span className="block mt-2 text-slate-400 border-t border-slate-700/80 pt-2">
+                        The bar shows progress toward your next{' '}
+                        <span className="text-slate-300 font-medium">{XP_MILESTONE.toLocaleString()} XP</span>{' '}
+                        milestone.
+                      </span>
+                    </span>
+                  </span>
+                </span>
+                <span className="text-lg font-bold tabular-nums text-white">
+                  {currentXP.toLocaleString()}{' '}
+                  <span className="text-sm font-semibold text-slate-400">total XP</span>
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-500 mb-2">
+                <span>
+                  Next milestone: {nextMilestone.toLocaleString()} XP
+                </span>
+                <span className="tabular-nums">
+                  {currentXP.toLocaleString()} / {nextMilestone.toLocaleString()}
+                </span>
               </div>
               <div className="h-3 w-full bg-slate-700 rounded-full overflow-hidden">
                 <div
@@ -184,14 +249,12 @@ function Profile() {
                   <div className="absolute inset-0 bg-white/20 animate-pulse" />
                 </div>
               </div>
-              {xpNeeded > 0 && (
+              {xpToNextMilestone > 0 && (
                 <p className="text-xs text-slate-500 mt-2 text-right">
-                  {xpNeeded.toLocaleString()} XP to Level {user.level + 1}
+                  {xpToNextMilestone.toLocaleString()} XP until next milestone
+                  {typeof user.level === 'number' ? ` · Level ${user.level}` : ''}
                 </p>
               )}
-              <p className="text-xs text-slate-500 mt-2">
-                Perfect score on an AI quiz adds <span className="text-slate-400 font-medium">+100 XP</span> to your account (each attempt is scored separately).
-              </p>
             </div>
             <div className="flex gap-3">
               <Link

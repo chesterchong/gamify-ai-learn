@@ -59,7 +59,7 @@ const toSafeUser = (user) => ({
   id: user.id,
   email: user.email,
   role: user.role,
-  xp: user.xp,
+  xp: typeof user.xp === 'number' && Number.isFinite(user.xp) ? user.xp : 0,
   level: user.level,
   streakCount: user.streakCount,
   lastActiveDate: user.lastActiveDate,
@@ -226,6 +226,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
       return res.status(404).json({ error: 'User not found' })
     }
 
+    res.set('Cache-Control', 'private, no-store')
     return res.json({ user: toSafeUser(user) })
   } catch (error) {
     return next(error)
