@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PerfectScoreBadge from './PerfectScoreBadge.jsx'
 import TermsThemeStyles from './TermsThemeStyles.jsx'
@@ -92,58 +92,74 @@ function LeaderboardMedal({ rank }) {
   )
 }
 
+const LEADERBOARD_TABS = [
+  { id: 'xp', label: 'XP' },
+  { id: 'accuracy', label: 'Accuracy rate' },
+]
+
 function Dashboard() {
   const apiBaseUrl = getApiBaseUrl()
   const [summary, setSummary] = useState(null)
   const [leaderboard, setLeaderboard] = useState([])
+  const [leaderboardTab, setLeaderboardTab] = useState('xp')
   const [loading, setLoading] = useState(true)
+  const [boardRefreshing, setBoardRefreshing] = useState(false)
   const [error, setError] = useState('')
 
+  const apiBaseUrlRef = useRef(apiBaseUrl)
+  const isFirstBootstrapForApi = useRef(true)
+
+  useEffect(() => {
+    if (apiBaseUrlRef.current !== apiBaseUrl) {
+      apiBaseUrlRef.current = apiBaseUrl
+      isFirstBootstrapForApi.current = true
+    }
+  }, [apiBaseUrl])
+
+  /** One round trip: summary + leaderboard; server RAM cache + Cache-Control for repeat visits. */
   useEffect(() => {
     let mounted = true
-    const load = async () => {
-      setError('')
+    const fullPageLoad = isFirstBootstrapForApi.current
+    if (fullPageLoad) {
+      setLoading(true)
+    } else {
+      setBoardRefreshing(true)
+    }
+    setError('')
+    ;(async () => {
       try {
-        const [sRes, lRes] = await Promise.all([
-          fetch(`${apiBaseUrl}/api/dashboard/summary`, {
-            credentials: 'include',
-            cache: 'no-store',
-          }),
-          fetch(`${apiBaseUrl}/api/dashboard/leaderboard`, {
-            credentials: 'include',
-            cache: 'no-store',
-          }),
-        ])
+        const res = await fetch(
+          `${apiBaseUrl}/api/dashboard/bootstrap?tab=${encodeURIComponent(leaderboardTab)}`,
+          { credentials: 'include' },
+        )
         if (!mounted) return
-        if (sRes.status === 401) {
+        if (res.status === 401) {
           setError('signin')
           setSummary(null)
           setLeaderboard([])
           return
         }
-        if (!sRes.ok) {
+        if (!res.ok) {
           setError('load')
           return
         }
-        const s = await sRes.json()
-        setSummary(s)
-        if (lRes.ok) {
-          const l = await lRes.json()
-          setLeaderboard(Array.isArray(l.leaderboard) ? l.leaderboard : [])
-        } else {
-          setLeaderboard([])
-        }
+        const data = await res.json()
+        setSummary(data.summary ?? null)
+        setLeaderboard(Array.isArray(data.leaderboard) ? data.leaderboard : [])
       } catch {
         if (mounted) setError('load')
       } finally {
-        if (mounted) setLoading(false)
+        if (mounted) {
+          setLoading(false)
+          setBoardRefreshing(false)
+          isFirstBootstrapForApi.current = false
+        }
       }
-    }
-    load()
+    })()
     return () => {
       mounted = false
     }
-  }, [apiBaseUrl])
+  }, [apiBaseUrl, leaderboardTab])
 
   const perfectCount = summary?.perfectQuizzesCount ?? 0
   const accuracy = summary?.accuracyPercent
@@ -440,19 +456,60 @@ function Dashboard() {
             </section>
 
             <section aria-labelledby="dash-leader-heading">
-              <div className="flex items-end justify-between gap-4 mb-4">
+              <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <h2
                   id="dash-leader-heading"
                   className="dash-section-title text-xs font-bold uppercase tracking-widest"
                 >
-                  Top 10 — XP ranking
+                  Top 10 rankings
                 </h2>
-                <span className="text-[10px] text-slate-600 hidden sm:inline">By total XP</span>
+                <div
+                  role="tablist"
+                  aria-label="Leaderboard category"
+                  className="flex flex-wrap gap-1 rounded-xl border border-slate-700/60 bg-slate-900/35 p-1 backdrop-blur-sm shadow-inner shadow-black/20"
+                >
+                  {LEADERBOARD_TABS.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={leaderboardTab === t.id}
+                      id={`dash-lb-tab-${t.id}`}
+                      aria-controls="dash-lb-panel"
+                      onClick={() => setLeaderboardTab(t.id)}
+                      className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                        leaderboardTab === t.id
+                          ? 'bg-slate-100/10 text-white shadow-sm ring-1 ring-white/10'
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="dash-leader-shell rounded-2xl border border-slate-700/60 bg-slate-900/30 overflow-hidden">
+              <div
+                id="dash-lb-panel"
+                role="tabpanel"
+                aria-labelledby={`dash-lb-tab-${leaderboardTab}`}
+                className="dash-leader-shell relative rounded-2xl border border-slate-700/60 bg-slate-900/30 overflow-hidden"
+              >
+                {boardRefreshing && (
+                  <div
+                    className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/50 backdrop-blur-[2px]"
+                    aria-hidden
+                  >
+                    <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                )}
                 {leaderboard.length === 0 ? (
                   <p className="p-8 text-center text-sm text-slate-500">
-                    No learners yet. Complete lessons and quizzes to climb the board.
+                    {leaderboardTab === 'xp' && (
+                      <>No learners yet. Earn XP from quizzes and lessons to appear here.</>
+                    )}
+                    {leaderboardTab === 'accuracy' && (
+                      <>No quiz attempts yet. Submit an AI quiz to build accuracy rankings.</>
+                    )}
                   </p>
                 ) : (
                   <ul className="divide-y divide-slate-800/80">
@@ -473,7 +530,7 @@ function Dashboard() {
                                 : ''
                         }`}
                       >
-                        <div className="shrink-0 flex items-center justify-center w-10">
+                        <div className="flex w-10 shrink-0 items-center justify-center">
                           <LeaderboardMedal rank={row.rank} />
                         </div>
                         <LeaderboardAvatar
@@ -481,7 +538,7 @@ function Dashboard() {
                           isCurrentUser={row.isCurrentUser}
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-white truncate">
+                          <p className="truncate text-sm font-semibold text-white">
                             {row.displayName}
                             {row.isCurrentUser && (
                               <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-primary">
@@ -490,10 +547,25 @@ function Dashboard() {
                             )}
                           </p>
                         </div>
-                        <span className="text-sm font-bold tabular-nums text-slate-200 shrink-0">
-                          {row.xp.toLocaleString()}{' '}
-                          <span className="text-slate-500 font-medium text-xs">XP</span>
-                        </span>
+                        {leaderboardTab === 'xp' && (
+                          <span className="shrink-0 text-sm font-bold tabular-nums text-slate-200">
+                            {row.xp.toLocaleString()}{' '}
+                            <span className="text-xs font-medium text-slate-500">XP</span>
+                          </span>
+                        )}
+                        {leaderboardTab === 'accuracy' && (
+                          <div className="shrink-0 text-right">
+                            <span className="text-sm font-bold tabular-nums text-slate-200">
+                              {formatAccuracy(row.accuracyPercent)}
+                            </span>
+                            {row.quizSubmissions > 0 && (
+                              <p className="mt-0.5 text-[10px] text-slate-500">
+                                {row.quizSubmissions}{' '}
+                                {row.quizSubmissions === 1 ? 'attempt' : 'attempts'}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
