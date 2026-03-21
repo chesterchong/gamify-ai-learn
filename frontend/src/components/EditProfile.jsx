@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
@@ -23,6 +23,12 @@ function EditProfile() {
   })
 
   const [user, setUser] = useState(null)
+  /** Role when the form was loaded; used to know if upgrading to admin requires unlock. */
+  const [initialProfessionalRole, setInitialProfessionalRole] = useState('student')
+  /** Set only after user confirms the admin modal; sent once on save, then cleared. */
+  const [adminPasscodeForUpgrade, setAdminPasscodeForUpgrade] = useState(null)
+  const [adminModalOpen, setAdminModalOpen] = useState(false)
+  const [adminModalDraft, setAdminModalDraft] = useState('')
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -49,6 +55,8 @@ function EditProfile() {
           password: '',
           profilePhotoUrl: data.user.profilePhotoUrl || '',
         })
+        setInitialProfessionalRole(userType)
+        setAdminPasscodeForUpgrade(null)
       } catch (err) {
         setError(err.message || 'Failed to load profile data')
       } finally {
@@ -115,6 +123,52 @@ function EditProfile() {
     setSuccess(false)
   }
 
+  const selectStudentRole = useCallback(() => {
+    setFormData((prev) => ({ ...prev, professionalRole: 'student' }))
+    setAdminPasscodeForUpgrade(null)
+    setError('')
+    setSuccess(false)
+  }, [])
+
+  const openAdminModal = useCallback(() => {
+    setAdminModalDraft('')
+    setAdminModalOpen(true)
+    setError('')
+    setSuccess(false)
+  }, [])
+
+  const confirmAdminModal = useCallback(() => {
+    const code = adminModalDraft.trim()
+    if (!code) {
+      setError('Enter the passcode.')
+      return
+    }
+    setAdminPasscodeForUpgrade(code)
+    setFormData((prev) => ({ ...prev, professionalRole: 'admin' }))
+    setAdminModalOpen(false)
+    setAdminModalDraft('')
+    setError('')
+  }, [adminModalDraft])
+
+  const cancelAdminModal = useCallback(() => {
+    setAdminModalOpen(false)
+    setAdminModalDraft('')
+  }, [])
+
+  const trySelectAdminRole = useCallback(() => {
+    if (formData.professionalRole === 'admin') return
+    openAdminModal()
+  }, [formData.professionalRole, openAdminModal])
+
+  useEffect(() => {
+    if (!adminModalOpen) return
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') cancelAdminModal()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [adminModalOpen, cancelAdminModal])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSaving(true)
@@ -132,8 +186,21 @@ function EditProfile() {
       if (formData.username.trim()) {
         updatePayload.username = formData.username.trim()
       }
-      updatePayload.professionalRole =
-        formData.professionalRole === 'admin' ? 'admin' : 'student'
+      const wantsAdmin = formData.professionalRole === 'admin'
+      const wasAdmin = String(initialProfessionalRole || '').toLowerCase() === 'admin'
+      if (wantsAdmin) {
+        updatePayload.professionalRole = 'admin'
+        if (!wasAdmin) {
+          if (!adminPasscodeForUpgrade) {
+            openAdminModal()
+            setSaving(false)
+            return
+          }
+          updatePayload.adminPasscode = adminPasscodeForUpgrade
+        }
+      } else {
+        updatePayload.professionalRole = 'student'
+      }
       if (formData.profilePhotoUrl) {
         updatePayload.profilePhotoUrl = formData.profilePhotoUrl
       }
@@ -159,8 +226,12 @@ function EditProfile() {
 
       const data = await response.json()
       setUser(data.user)
+      const nextType =
+        data.user?.professionalRole === 'admin' ? 'admin' : 'student'
+      setInitialProfessionalRole(nextType)
+      setAdminPasscodeForUpgrade(null)
       setSuccess(true)
-      
+
       // Clear password field after successful save
       setFormData((prev) => ({ ...prev, password: '' }))
 
@@ -169,7 +240,15 @@ function EditProfile() {
         navigate('/profile')
       }, 1500)
     } catch (err) {
-      setError(err.message || 'Failed to save changes')
+      const msg = err.message || 'Failed to save changes'
+      setError(msg)
+      if (
+        typeof msg === 'string' &&
+        (msg.includes('unlock code') || msg.includes('Admin account type'))
+      ) {
+        setAdminPasscodeForUpgrade(null)
+        setFormData((prev) => ({ ...prev, professionalRole: 'student' }))
+      }
     } finally {
       setSaving(false)
     }
@@ -217,15 +296,38 @@ function EditProfile() {
             </h1>
           </div>
 
-          {(error || success) && (
+          {error && (
             <div
-              className={`mb-6 p-4 rounded-lg border ${
-                error
-                  ? 'bg-red-500/10 border-red-500/50 text-red-400'
-                  : 'bg-green-500/10 border-green-500/50 text-green-400'
-              }`}
+              className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/40 bg-red-950/30 px-4 py-3.5 text-red-300 shadow-lg shadow-red-950/20"
+              role="alert"
             >
-              {error || (success && 'Profile updated successfully! Redirecting...')}
+              <span
+                className="material-symbols-outlined shrink-0 text-[22px] text-red-400/90"
+                aria-hidden
+              >
+                error
+              </span>
+              <p className="text-sm font-medium pt-0.5">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div
+              className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/35 bg-emerald-950/35 px-4 py-3.5 text-emerald-100 shadow-lg shadow-emerald-950/25"
+              role="status"
+              aria-live="polite"
+            >
+              <span
+                className="material-symbols-outlined shrink-0 text-[24px] text-emerald-400"
+                aria-hidden
+              >
+                check_circle
+              </span>
+              <div className="min-w-0 pt-0.5">
+                <p className="text-sm font-semibold text-emerald-50">Changes saved</p>
+                <p className="mt-0.5 text-xs text-emerald-200/85 leading-snug">
+                  Taking you back to your profile…
+                </p>
+              </div>
             </div>
           )}
 
@@ -315,23 +417,50 @@ function EditProfile() {
                       Choose a unique username
                     </span>
                   </label>
-                  <label className="flex flex-col gap-2 md:col-span-2">
-                    <span className="text-xs uppercase tracking-widest text-slate-400">
-                      User Type
-                    </span>
-                    <select
-                      name="professionalRole"
-                      value={formData.professionalRole}
-                      onChange={handleInputChange}
-                      className="h-11 rounded-lg bg-[#162235] border border-[#23354d] px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  <div
+                    className="flex flex-col gap-2 md:col-span-2 md:flex-row md:items-center md:justify-between md:gap-6"
+                    role="group"
+                    aria-labelledby="edit-profile-role-label"
+                  >
+                    <span
+                      className="text-xs uppercase tracking-widest text-slate-400 shrink-0"
+                      id="edit-profile-role-label"
                     >
-                      <option value="student">Student</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                    <span className="text-[11px] text-slate-500">
-                      Account type: admin or student only
+                      Account type
                     </span>
-                  </label>
+                    <div className="relative inline-flex h-9 w-full max-w-[13.5rem] shrink-0 select-none rounded-md border border-[#23354d] bg-[#162235] p-1">
+                      <span
+                        className={`pointer-events-none absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-md bg-[#0b1118] transition-[left] duration-200 ease-out ${
+                          formData.professionalRole === 'admin'
+                            ? 'left-[calc(50%+2px)]'
+                            : 'left-1'
+                        }`}
+                        aria-hidden
+                      />
+                      <button
+                        type="button"
+                        onClick={selectStudentRole}
+                        className={`relative z-[1] min-w-0 flex-1 rounded-md py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1623] ${
+                          formData.professionalRole === 'student'
+                            ? 'text-slate-100'
+                            : 'text-slate-500 hover:text-slate-400'
+                        }`}
+                      >
+                        Student
+                      </button>
+                      <button
+                        type="button"
+                        onClick={trySelectAdminRole}
+                        className={`relative z-[1] min-w-0 flex-1 rounded-md py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1623] ${
+                          formData.professionalRole === 'admin'
+                            ? 'text-slate-100'
+                            : 'text-slate-500 hover:text-slate-400'
+                        }`}
+                      >
+                        Admin
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -412,6 +541,59 @@ function EditProfile() {
             </section>
           </form>
         </div>
+
+        {adminModalOpen && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#05080e]/80 p-4 backdrop-blur-md"
+            role="presentation"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) cancelAdminModal()
+            }}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-white/15 bg-gradient-to-b from-[#151c2e]/92 to-[#0a1018]/95 p-6 shadow-[0_24px_80px_-16px_rgba(0,0,0,0.9)] backdrop-blur-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-unlock-title"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-300">
+                <span className="material-symbols-outlined text-[26px]">lock</span>
+              </div>
+              <h2 id="admin-unlock-title" className="text-lg font-bold tracking-tight text-white">
+                Passcode Required
+              </h2>
+              <input
+                type="password"
+                value={adminModalDraft}
+                onChange={(e) => setAdminModalDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') confirmAdminModal()
+                }}
+                className="mt-4 w-full h-11 rounded-xl border border-white/12 bg-white/[0.06] px-4 text-sm text-white placeholder:text-slate-500 backdrop-blur-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                placeholder="Passcode"
+                autoComplete="off"
+                autoFocus
+              />
+              <div className="mt-6 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={cancelAdminModal}
+                  className="h-10 rounded-xl border border-white/12 bg-white/[0.04] px-4 text-sm font-semibold text-slate-200 backdrop-blur-sm hover:bg-white/[0.08] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAdminModal}
+                  className="h-10 rounded-xl border border-primary/40 bg-primary/90 px-4 text-sm font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary transition-colors"
+                >
+                  Unlock
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
   )
 }

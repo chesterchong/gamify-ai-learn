@@ -19,6 +19,14 @@ const normalizeUserType = (value) => {
   return USER_TYPES.has(v) ? v : null
 }
 
+/** Compare passcode to server secret without leaking length via timingSafeEqual input lengths. */
+function adminPasscodeMatches(provided, secret) {
+  if (typeof provided !== 'string' || !secret) return false
+  const hProvided = crypto.createHash('sha256').update(provided, 'utf8').digest()
+  const hSecret = crypto.createHash('sha256').update(secret, 'utf8').digest()
+  return crypto.timingSafeEqual(hProvided, hSecret)
+}
+
 /** Display name default: email local part (before @). User can change in profile. */
 function defaultFullNameFromEmail(emailLower) {
   const i = emailLower.indexOf('@')
@@ -292,6 +300,14 @@ router.put('/profile', requireAuth, async (req, res, next) => {
   try {
     const { fullName, username, professionalRole, profilePhotoUrl, password } = req.body
 
+    const existing = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { professionalRole: true },
+    })
+    if (!existing) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
     // Check if username is being changed and if it's already taken
     if (username !== undefined && username !== null) {
       const trimmedUsername = typeof username === 'string' ? username.trim() : ''
@@ -327,7 +343,24 @@ router.put('/profile', requireAuth, async (req, res, next) => {
           .status(400)
           .json({ error: 'User type must be admin or student' })
       }
-      updateData.professionalRole = normalized ?? 'student'
+      const nextRole = normalized ?? 'student'
+      const wasAdmin =
+        String(existing.professionalRole || '').toLowerCase() === 'admin'
+      if (nextRole === 'admin' && !wasAdmin) {
+        const secret = process.env.PROFILE_ADMIN_PASSCODE || ''
+        if (!secret) {
+          return res.status(403).json({
+            error:
+              'Admin account type is not available. The server must set PROFILE_ADMIN_PASSCODE.',
+          })
+        }
+        const provided =
+          typeof req.body.adminPasscode === 'string' ? req.body.adminPasscode : ''
+        if (!adminPasscodeMatches(provided, secret)) {
+          return res.status(403).json({ error: 'Invalid admin unlock code.' })
+        }
+      }
+      updateData.professionalRole = nextRole
     }
     if (profilePhotoUrl !== undefined) {
       updateData.profilePhotoUrl = typeof profilePhotoUrl === 'string' ? profilePhotoUrl.trim() || null : null
@@ -349,7 +382,12 @@ router.put('/profile', requireAuth, async (req, res, next) => {
 
     await syncUserTypeToSupabaseAuth(user.supabaseAuthId, user.professionalRole)
 
-    return res.json({ user: toSafeUser(user) })
+    req.session.role = user.role
+    req.session.professionalRole = user.professionalRole
+    req.session.save((saveErr) => {
+      if (saveErr) return next(saveErr)
+      return res.json({ user: toSafeUser(user) })
+    })
   } catch (error) {
     console.error('[auth/profile] Error:', error?.message || error)
     console.error('[auth/profile] Stack:', error?.stack)
