@@ -30,70 +30,23 @@ function parseCourseFromNote(note) {
   return { code: 'IMPORT', title: t }
 }
 
-// Demo quizzes (Learn seed). Uploaded imports are loaded from GET /api/quiz/import-batches.
-const STATIC_QUIZ_LIST = [
-  {
-    id: '001',
-    title: 'Data Structures Fundamentals',
-    course: {
-      code: 'BACS2063',
-      title: 'Data Structures & Algorithms',
-      class: 'bg-blue-900/20 text-blue-400 border-blue-800/40',
-    },
-    status: 'STABLE',
-    statusClass: 'text-green-500 border-green-500/30',
-    estimatedTime: '~25 min',
-    modules: [
-      { label: 'BACS2063', class: 'bg-blue-900/20 text-blue-400 border-blue-800/40' },
-      { label: 'SYLLABUS_V2', class: 'bg-cyan-900/20 text-primary border-cyan-800/40' },
-    ],
-  },
-  {
-    id: '002',
-    title: 'Discrete Mathematics I',
-    course: {
-      code: 'BACS2023',
-      title: 'Object Oriented Programming',
-      class: 'bg-blue-900/20 text-blue-400 border-blue-800/40',
-    },
-    status: 'LEGACY',
-    statusClass: 'text-orange-500 border-orange-500/30',
-    estimatedTime: '~15 min',
-    modules: [{ label: 'BACS2023', class: 'bg-blue-900/20 text-blue-400 border-blue-800/40' }],
-  },
-  {
-    id: '003',
-    title: 'Dynamic Programming & Opt.',
-    course: {
-      code: 'BACS2063',
-      title: 'Data Structures & Algorithms',
-      class: 'bg-blue-900/20 text-blue-400 border-blue-800/40',
-    },
-    status: 'CRITICAL',
-    statusClass: 'text-red-500 border-red-500/30',
-    estimatedTime: '~12 min',
-    modules: [
-      { label: 'BACS2063', class: 'bg-blue-900/20 text-blue-400 border-blue-800/40' },
-      { label: 'HARDCORE', class: 'bg-purple-900/20 text-purple-400 border-purple-800/40' },
-    ],
-  },
-  {
-    id: '004',
-    title: 'Modern CSS & Tailwind',
-    course: {
-      code: 'BAIT1023',
-      title: 'Web Design & Development',
-      class: 'bg-blue-900/20 text-blue-400 border-blue-800/40',
-    },
-    status: 'NEW_GEN',
-    statusClass: 'text-primary border-primary/30',
-    estimatedTime: '~20 min',
-    modules: [
-      { label: 'BAIT1023', class: 'bg-blue-900/20 text-blue-400 border-blue-800/40' },
-      { label: 'FRONTEND', class: 'bg-yellow-900/20 text-yellow-500 border-yellow-800/40' },
-    ],
-  },
+/** Matches STABLE / LEGACY / CRITICAL / NEW_GEN chip styling: colored text + border (no solid fill). */
+const CODE_STATUS_CHIP_PALETTE = [
+  'text-green-500 border-green-500/30',
+  'text-orange-500 border-orange-500/30',
+  'text-red-500 border-red-500/30',
+  'text-primary border-primary/30',
 ]
+
+function codeChipClassForCourseCode(code) {
+  const s = (code || '').trim().toUpperCase()
+  if (!s || s === '—') return CODE_STATUS_CHIP_PALETTE[0]
+  let h = 0
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) >>> 0
+  }
+  return CODE_STATUS_CHIP_PALETTE[h % CODE_STATUS_CHIP_PALETTE.length]
+}
 
 function Quiz() {
   const [searchInput, setSearchInput] = useState('')
@@ -103,7 +56,8 @@ function Quiz() {
   })
   /** false until we know session (from cache on first paint, or after /me). Table shows in one shot when true. */
   const [authChecked, setAuthChecked] = useState(() => readMeCache() !== null)
-  const [adminCourseDraft, setAdminCourseDraft] = useState('')
+  const [adminCodeDraft, setAdminCodeDraft] = useState('')
+  const [adminTitleDraft, setAdminTitleDraft] = useState('')
   const [adminFiles, setAdminFiles] = useState([])
   const [adminUploading, setAdminUploading] = useState(false)
   const [adminUploadMessage, setAdminUploadMessage] = useState('')
@@ -168,7 +122,6 @@ function Quiz() {
   }, [apiBaseUrl, isAdmin])
 
   const loadAiCollections = useCallback(async () => {
-    if (!isAdmin) return
     try {
       const res = await fetch(`${apiBaseUrl}/api/quiz/ai-collections`, {
         credentials: 'include',
@@ -179,13 +132,17 @@ function Quiz() {
     } catch {
       setAiCollections([])
     }
-  }, [apiBaseUrl, isAdmin])
+  }, [apiBaseUrl])
+
+  useEffect(() => {
+    if (!authChecked || !user) return
+    loadAiCollections()
+  }, [authChecked, user, loadAiCollections])
 
   useEffect(() => {
     if (!authChecked || !isAdmin) return
     loadImportBatches()
-    loadAiCollections()
-  }, [authChecked, isAdmin, loadImportBatches, loadAiCollections])
+  }, [authChecked, isAdmin, loadImportBatches])
 
   const handleGenerateBatch = async (batchId) => {
     setBatchGenerate({ batchId, loading: true, error: '' })
@@ -219,29 +176,11 @@ function Quiz() {
     }
   }
 
-  const staticIdMax = useMemo(() => {
-    const nums = STATIC_QUIZ_LIST.map((q) => parseInt(q.id, 10)).filter((n) => !Number.isNaN(n))
-    return nums.length ? Math.max(...nums) : 0
-  }, [])
-
   const nextDraftId = useMemo(() => {
-    return formatListId(staticIdMax + importBatches.length + 1)
-  }, [staticIdMax, importBatches.length])
+    return formatListId(importBatches.length + 1)
+  }, [importBatches.length])
 
   const tableRows = useMemo(() => {
-    const quizzes = STATIC_QUIZ_LIST.map((q) => ({ kind: 'quiz', ...q }))
-    if (!isAdmin) return quizzes
-    const chronological = [...importBatches].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    )
-    const importsChrono = chronological.map((b, index) => ({
-      kind: 'import',
-      batchId: b.id,
-      displayId: formatListId(staticIdMax + 1 + index),
-      courseNote: typeof b.courseNote === 'string' ? b.courseNote : '',
-      files: Array.isArray(b.files) ? b.files : [],
-    }))
-    const importsReversed = [...importsChrono].reverse()
     const aiRows = (Array.isArray(aiCollections) ? aiCollections : []).map((c) => ({
       kind: 'ai',
       collectionId: c.id,
@@ -251,30 +190,31 @@ function Quiz() {
       questionCount: typeof c.questionCount === 'number' ? c.questionCount : 0,
       model: c.model || '',
       createdAt: c.createdAt,
+      files: Array.isArray(c.sourceFiles) ? c.sourceFiles : [],
     }))
-    return [...importsReversed, ...aiRows, ...quizzes]
-  }, [aiCollections, importBatches, isAdmin, staticIdMax])
+    if (!isAdmin) return aiRows
+    const chronological = [...importBatches].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    )
+    const importsChrono = chronological.map((b, index) => ({
+      kind: 'import',
+      batchId: b.id,
+      displayId: formatListId(1 + index),
+      courseNote: typeof b.courseNote === 'string' ? b.courseNote : '',
+      files: Array.isArray(b.files) ? b.files : [],
+    }))
+    const importsReversed = [...importsChrono].reverse()
+    return [...importsReversed, ...aiRows]
+  }, [aiCollections, importBatches, isAdmin])
 
   const normalizedQuery = searchInput.trim().toLowerCase()
   const filteredTableRows = useMemo(() => {
     if (!normalizedQuery) return tableRows
     return tableRows.filter((row) => {
-      if (row.kind === 'quiz') {
-        const matchesTitle = row.title.toLowerCase().includes(normalizedQuery)
-        const matchesModule = row.modules.some((m) =>
-          m.label.toLowerCase().includes(normalizedQuery),
-        )
-        const matchesStatus = row.status.toLowerCase().includes(normalizedQuery)
-        const matchesId = row.id.includes(normalizedQuery)
-        const courseStr =
-          typeof row.course === 'object' && row.course?.code
-            ? `${row.course.code} ${row.course.title || ''}`.toLowerCase()
-            : ''
-        const matchesCourse = courseStr.includes(normalizedQuery)
-        return matchesTitle || matchesModule || matchesStatus || matchesId || matchesCourse
-      }
       if (row.kind === 'import') {
         const note = (row.courseNote || '').toLowerCase()
+        const code = parseCourseFromNote(row.courseNote).code.toLowerCase()
+        const matchesCode = code.includes(normalizedQuery)
         const matchesNote = note.includes(normalizedQuery)
         const matchesFile = row.files.some((f) =>
           (f.originalName || '').toLowerCase().includes(normalizedQuery),
@@ -284,18 +224,30 @@ function Quiz() {
           row.displayId.toLowerCase().includes(normalizedQuery)
         const matchesTag =
           normalizedQuery.length >= 3 && /upload|import|storage/.test(normalizedQuery)
-        return matchesNote || matchesFile || matchesId || matchesTag
+        return matchesCode || matchesNote || matchesFile || matchesId || matchesTag
       }
       if (row.kind === 'ai') {
+        const code = parseCourseFromNote(row.courseNote).code.toLowerCase()
+        const matchesCode = code.includes(normalizedQuery)
         const matchesTitle = (row.title || '').toLowerCase().includes(normalizedQuery)
         const matchesNote = (row.courseNote || '').toLowerCase().includes(normalizedQuery)
+        const matchesFile = row.files.some((f) =>
+          (f.originalName || '').toLowerCase().includes(normalizedQuery),
+        )
         const matchesId =
           (row.collectionId || '').toLowerCase().includes(normalizedQuery) ||
           (row.displayId || '').toLowerCase().includes(normalizedQuery)
         const matchesAi = normalizedQuery === 'ai' || normalizedQuery.includes('gemini')
-        return matchesTitle || matchesNote || matchesId || matchesAi
+        return (
+          matchesCode ||
+          matchesTitle ||
+          matchesNote ||
+          matchesFile ||
+          matchesId ||
+          matchesAi
+        )
       }
-      return true
+      return false
     })
   }, [tableRows, normalizedQuery])
 
@@ -317,19 +269,26 @@ function Quiz() {
   }
 
   const submitAdminUpload = async () => {
-    if (!adminCourseDraft.trim()) {
-      setAdminUploadMessage('Enter course code and title (Code/Title field).')
+    const codePart = adminCodeDraft.trim()
+    const titlePart = adminTitleDraft.trim()
+    if (!codePart) {
+      setAdminUploadMessage('Enter a course code (Code column).')
+      return
+    }
+    if (!titlePart) {
+      setAdminUploadMessage('Enter a course title (Course column).')
       return
     }
     if (adminFiles.length === 0) {
-      setAdminUploadMessage('Choose files with UPLOAD, then click Add.')
+      setAdminUploadMessage('Choose files with the file button, then click Add.')
       return
     }
+    const courseNote = `${codePart} ${titlePart}`
     setAdminUploading(true)
     setAdminUploadMessage('')
     try {
       const fd = new FormData()
-      fd.append('courseNote', adminCourseDraft.trim())
+      fd.append('courseNote', courseNote)
       adminFiles.forEach((f) => fd.append('files', f))
       const res = await fetch(`${apiBaseUrl}/api/quiz/import-files`, {
         method: 'POST',
@@ -427,17 +386,17 @@ function Quiz() {
               className="glass-card rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto"
               data-purpose="quiz-log"
             >
-              <div className="grid grid-cols-[auto_minmax(0,14rem)_minmax(18rem,1fr)_auto_auto] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-[10px] sm:text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
+              <div className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(12rem,1fr)_12rem] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-[10px] sm:text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
                 <div className="w-10 text-left">Id</div>
+                <div className="min-w-0">Code</div>
                 <div className="min-w-0">Course</div>
-                <div className="min-w-0">Topics</div>
-                <div className="w-20 text-center">Est. Time</div>
-                <div className="w-28 text-right">Action</div>
+                <div className="min-w-0">Files</div>
+                <div className="text-right">Action</div>
               </div>
               <div className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
                 {isAdmin && (
                   <div
-                    className="grid grid-cols-[auto_minmax(0,14rem)_minmax(18rem,1fr)_auto_auto] gap-4 px-6 py-4 items-center bg-primary/5 border-b border-primary/20"
+                    className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(12rem,1fr)_12rem] gap-4 px-6 py-4 items-center bg-primary/5 border-b border-primary/20"
                     data-purpose="admin-new-quiz-row"
                   >
                     <div className="w-10 text-slate-500 dark:text-slate-400 text-xs tabular-nums select-none" title="Assigned when quiz is created">
@@ -446,11 +405,22 @@ function Quiz() {
                     <div className="min-w-0">
                       <input
                         type="text"
-                        value={adminCourseDraft}
-                        onChange={(e) => setAdminCourseDraft(e.target.value)}
+                        value={adminCodeDraft}
+                        onChange={(e) => setAdminCodeDraft(e.target.value.toUpperCase())}
                         className="quiz-admin-course-input w-full text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="Enter Code/Title"
-                        aria-label="Course code and title"
+                        placeholder="Code"
+                        aria-label="Course code"
+                        required
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <input
+                        type="text"
+                        value={adminTitleDraft}
+                        onChange={(e) => setAdminTitleDraft(e.target.value)}
+                        className="quiz-admin-course-input w-full text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        placeholder="Title"
+                        aria-label="Course title"
                         required
                       />
                     </div>
@@ -475,7 +445,7 @@ function Quiz() {
                         <span className="material-symbols-outlined text-[14px]" aria-hidden>
                           upload_file
                         </span>
-                        UPLOAD
+                        {!adminUploadMessage.startsWith('Saved') && 'UPLOAD'}
                       </button>
                       {adminFiles.length > 0 && (
                         <ul className="text-[10px] text-slate-400 space-y-1 max-w-full">
@@ -505,18 +475,12 @@ function Quiz() {
                         </p>
                       )}
                     </div>
-                    <div
-                      className="w-20 text-center text-xs text-slate-500 dark:text-slate-400 select-none cursor-not-allowed"
-                      title="Estimated by AI after processing"
-                    >
-                      —
-                    </div>
-                    <div className="w-28 text-right">
+                    <div className="text-right">
                       <button
                         type="button"
                         onClick={submitAdminUpload}
                         disabled={adminUploading}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600/90 border border-emerald-500/50 hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors disabled:opacity-50"
                         aria-label="Submit files to Supabase"
                       >
                         <span className="material-symbols-outlined text-[14px]">add</span>
@@ -525,11 +489,12 @@ function Quiz() {
                     </div>
                   </div>
                 )}
-                {filteredTableRows.map((row) =>
-                  row.kind === 'import' ? (
+                {filteredTableRows.map((row) => {
+                  if (row.kind === 'import') {
+                    return (
                     <div
                       key={`import-${row.batchId}`}
-                      className="grid grid-cols-[auto_minmax(0,14rem)_minmax(18rem,1fr)_auto_auto] gap-4 px-6 py-4 items-center transition-colors hover:bg-cyan-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
+                      className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(12rem,1fr)_12rem] gap-4 px-6 py-4 items-center transition-colors hover:bg-cyan-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
                       data-purpose="quiz-import-batch-row"
                     >
                       <div
@@ -538,22 +503,19 @@ function Quiz() {
                       >
                         {row.displayId}
                       </div>
-                      <div className="min-w-0 flex flex-wrap items-center gap-2">
+                      <div className="min-w-0 flex items-center">
                         <span
-                          className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 bg-cyan-900/30 text-cyan-300 border-cyan-700/40"
+                          className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate ${codeChipClassForCourseCode(parseCourseFromNote(row.courseNote).code)}`}
                           title="Imported batch"
                         >
                           {parseCourseFromNote(row.courseNote).code}
                         </span>
-                        <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
-                          {parseCourseFromNote(row.courseNote).title || row.courseNote}
-                        </span>
+                      </div>
+                      <div className="min-w-0 text-xs text-slate-600 dark:text-slate-300 truncate">
+                        {parseCourseFromNote(row.courseNote).title || row.courseNote}
                       </div>
                       <div className="min-w-0 flex flex-col gap-1 items-start">
                         <div className="flex flex-wrap gap-1 justify-start items-center">
-                          <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 text-emerald-400 border-emerald-500/30">
-                            UPLOAD
-                          </span>
                           {row.files.map((f) => (
                             <span
                               key={f.id}
@@ -568,8 +530,7 @@ function Quiz() {
                           <p className="text-[10px] text-amber-400 max-w-full">{batchGenerate.error}</p>
                         )}
                       </div>
-                      <div className="w-20 text-center text-xs text-slate-500 dark:text-slate-400">—</div>
-                      <div className="w-28 text-right">
+                      <div className="text-right">
                         <button
                           type="button"
                           onClick={() => handleGenerateBatch(row.batchId)}
@@ -584,10 +545,13 @@ function Quiz() {
                         </button>
                       </div>
                     </div>
-                  ) : row.kind === 'ai' ? (
+                    )
+                  }
+                  if (row.kind === 'ai') {
+                    return (
                     <div
                       key={`ai-${row.collectionId}`}
-                      className="grid grid-cols-[auto_minmax(0,14rem)_minmax(18rem,1fr)_auto_auto] gap-4 px-6 py-4 items-center transition-colors hover:bg-violet-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
+                      className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(12rem,1fr)_12rem] gap-4 px-6 py-4 items-center transition-colors hover:bg-violet-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
                       data-purpose="quiz-ai-collection-row"
                     >
                       <div
@@ -596,80 +560,58 @@ function Quiz() {
                       >
                         {row.displayId}
                       </div>
-                      <div className="min-w-0 flex flex-wrap items-center gap-2">
+                      <div className="min-w-0 flex items-center">
                         <span
-                          className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 bg-violet-900/30 text-violet-300 border-violet-700/40"
+                          className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-full truncate ${codeChipClassForCourseCode(parseCourseFromNote(row.courseNote).code)}`}
                           title="AI-generated from imports"
                         >
                           {parseCourseFromNote(row.courseNote).code}
                         </span>
-                        <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
-                          {row.title}
-                        </span>
+                      </div>
+                      <div className="min-w-0 text-xs text-slate-600 dark:text-slate-300 truncate">
+                        {row.title}
                       </div>
                       <div className="min-w-0 flex flex-wrap gap-1 justify-start items-center">
-                        <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 text-violet-300 border-violet-500/30">
-                          GEMINI
-                        </span>
+                        {row.files.map((f) => (
+                          <span
+                            key={f.id}
+                            className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-[10rem] truncate border-slate-600/50 text-slate-400"
+                            title={f.originalName}
+                          >
+                            {f.originalName}
+                          </span>
+                        ))}
                         <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 border-slate-600/50 text-slate-400">
                           {row.questionCount} Q
                         </span>
                       </div>
-                      <div className="w-20 text-center text-xs text-slate-500 dark:text-slate-400">
-                        ~{Math.max(5, Math.round(row.questionCount * 1.5))} min
-                      </div>
-                      <div className="w-28 text-right">
-                        <Link
-                          to={`/quiz/ai/${row.collectionId}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
-                          aria-label={`View AI quiz ${row.collectionId}`}
-                        >
-                          <span className="material-symbols-outlined text-[14px]">visibility</span>
-                          View
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      key={row.id}
-                      className="grid grid-cols-[auto_minmax(0,14rem)_minmax(18rem,1fr)_auto_auto] gap-4 px-6 py-4 items-center transition-colors hover:bg-primary/5 group"
-                    >
-                      <div className="w-10 text-slate-500 dark:text-slate-400 text-xs tabular-nums">
-                        {row.id}
-                      </div>
-                      <div className="min-w-0 flex flex-wrap items-center gap-2">
-                        <span
-                          className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 ${row.course.class}`}
-                        >
-                          {row.course.code}
-                        </span>
-                        <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
-                          {row.course.title}
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex flex-wrap gap-1 justify-start">
-                        <span
-                          className={`text-[9px] border px-1.5 py-0.5 rounded shrink-0 ${row.statusClass}`}
-                        >
-                          {row.status}
-                        </span>
-                      </div>
-                      <div className="w-20 text-center text-xs text-slate-500 dark:text-slate-400">
-                        {row.estimatedTime}
-                      </div>
-                      <div className="w-28 text-right">
+                      <div className="text-right flex flex-wrap items-center justify-end gap-1.5">
+                        {isAdmin && (
+                          <Link
+                            to={`/quiz/ai/${row.collectionId}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
+                            aria-label={`View AI quiz ${row.collectionId}`}
+                          >
+                            <span className="material-symbols-outlined text-[14px]">visibility</span>
+                            View
+                          </Link>
+                        )}
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
-                          aria-label={`Run quiz ${row.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
+                          aria-label={`Run AI quiz ${row.collectionId}`}
+                          title="Run quiz (coming soon)"
+                          data-purpose="ai-quiz-run-placeholder"
                         >
                           <span className="material-symbols-outlined text-[14px]">play_arrow</span>
                           Run
                         </button>
                       </div>
                     </div>
-                  ),
-                )}
+                    )
+                  }
+                  return null
+                })}
               </div>
             </section>
             )}

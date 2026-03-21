@@ -168,21 +168,23 @@ router.post(
 
 /**
  * GET /api/quiz/ai-collections
- * AI-generated quiz collections (MCQs from Gemini). Admin only.
+ * AI-generated quiz collections (MCQs from Gemini). Any authenticated user.
  */
-router.get('/ai-collections', requireAuth, requireAdmin, async (req, res, next) => {
+router.get('/ai-collections', requireAuth, async (req, res, next) => {
   try {
     const collections = await prisma.aiQuizCollection.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100,
-      select: {
-        id: true,
-        title: true,
-        courseNote: true,
-        batchId: true,
-        model: true,
-        createdAt: true,
+      include: {
         _count: { select: { questions: true } },
+        batch: {
+          select: {
+            files: {
+              orderBy: { id: 'asc' },
+              select: { id: true, originalName: true },
+            },
+          },
+        },
       },
     })
     return res.json({
@@ -194,6 +196,7 @@ router.get('/ai-collections', requireAuth, requireAdmin, async (req, res, next) 
         model: c.model,
         createdAt: c.createdAt,
         questionCount: c._count.questions,
+        sourceFiles: c.batch?.files ?? [],
       })),
     })
   } catch (err) {
@@ -203,12 +206,11 @@ router.get('/ai-collections', requireAuth, requireAdmin, async (req, res, next) 
 
 /**
  * GET /api/quiz/ai-collections/:collectionId
- * Full collection with ordered questions. Admin only.
+ * Full collection with ordered questions. Any authenticated user.
  */
 router.get(
   '/ai-collections/:collectionId',
   requireAuth,
-  requireAdmin,
   async (req, res, next) => {
     try {
       const { collectionId } = req.params

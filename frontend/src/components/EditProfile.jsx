@@ -349,23 +349,13 @@ function EditProfile() {
                     <span className="text-xs uppercase tracking-widest text-slate-400">
                       Email Address
                     </span>
-                    <div className="flex items-center gap-3">
-                      <input
-                        name="email"
-                        value={formData.email}
-                        disabled
-                        className="flex-1 h-11 rounded-lg bg-[#162235]/50 border border-[#23354d] px-4 text-sm text-white/70 cursor-not-allowed"
-                        placeholder="you@example.com"
-                      />
-                      <button
-                        className="h-11 px-4 rounded-lg border border-[#2a3d55] bg-[#0f1623] text-xs font-semibold text-slate-400 cursor-not-allowed"
-                        type="button"
-                        disabled
-                        title="Email change not available"
-                      >
-                        Change Email
-                      </button>
-                    </div>
+                    <input
+                      name="email"
+                      value={formData.email}
+                      disabled
+                      className="w-full h-11 rounded-lg bg-[#162235]/50 border border-[#23354d] px-4 text-sm text-white/70 cursor-not-allowed"
+                      placeholder="you@example.com"
+                    />
                     <span className="text-[11px] text-slate-500">
                       Email cannot be changed
                     </span>
