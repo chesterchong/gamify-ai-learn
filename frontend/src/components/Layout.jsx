@@ -1,9 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import supabase from '../lib/supabase'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function Layout({ title, children, mainClassName = '' }) {
   const navigate = useNavigate()
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
   const navLinkClass = ({ isActive }) =>
     [
       'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors border-l-4',

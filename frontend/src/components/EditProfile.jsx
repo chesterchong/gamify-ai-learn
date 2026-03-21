@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function EditProfile() {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

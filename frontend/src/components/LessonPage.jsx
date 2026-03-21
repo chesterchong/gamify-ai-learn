@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
   const [data, setData] = useState(null)
@@ -14,7 +15,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
   const [sidebarLoading, setSidebarLoading] = useState(false)
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   const QUIZ_DELIM = '\n---QUIZ---\n'
   const FALLBACK_OPTIONS = ['All of the above', 'None of the above', 'Not sure', 'Skip for now']

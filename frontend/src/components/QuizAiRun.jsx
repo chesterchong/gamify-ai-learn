@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
 import { formatPageTitle } from '../lib/documentTitle.js'
 import { formatEstimatedQuizTime, shuffleDisplayPermutation } from '../lib/quizRunUtils.js'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 /**
  * Desktop quiz row uses lg:h-[calc(100dvh-13.5rem)]:
@@ -40,7 +41,7 @@ function QuizAiRun() {
   const [activeQuestionId, setActiveQuestionId] = useState(null)
   const questionRefs = useRef({})
   const mainScrollRef = useRef(null)
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   const loadHistory = useCallback(async () => {
     if (!collectionId) return

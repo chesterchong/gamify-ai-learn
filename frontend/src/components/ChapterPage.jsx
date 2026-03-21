@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function ChapterPage({ moduleId, courseId, courseTitle, onBack, onOpenLesson }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   const fetchModule = async () => {
     if (!moduleId) {

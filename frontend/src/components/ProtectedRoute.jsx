@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function ProtectedRoute({ children }) {
   const [status, setStatus] = useState('loading')
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   useEffect(() => {
     let isMounted = true

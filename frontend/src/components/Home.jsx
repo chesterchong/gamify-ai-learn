@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom'
 import { GravityStarsBackground } from './animate-ui/components/backgrounds/gravity-stars'
 import GradientText from './GradientText'
 import ShinyText from './ShinyText'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function Home() {
   // Only show Get Started when we've confirmed the user is not logged in (avoids flash)
   const [authStatus, setAuthStatus] = useState('idle') // 'idle' | 'authenticated' | 'unauthenticated'
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   useEffect(() => {
     let isMounted = true

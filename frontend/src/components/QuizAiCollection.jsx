@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
 import { formatPageTitle } from '../lib/documentTitle.js'
 import { formatEstimatedQuizTime } from '../lib/quizRunUtils.js'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function choiceListFromJson(choices) {
   if (Array.isArray(choices)) return choices.map((c) => (typeof c === 'string' ? c : String(c)))
@@ -18,7 +19,7 @@ function QuizAiCollection() {
   const [activeQuestionId, setActiveQuestionId] = useState(null)
   const questionRefs = useRef({})
   const mainScrollRef = useRef(null)
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   const questions = collection?.questions?.length
     ? [...collection.questions].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))

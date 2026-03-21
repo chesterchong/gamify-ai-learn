@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { clearMeCache, readMeCache, writeMeCache } from '../lib/authMeCache.js'
 import TermsThemeStyles from './TermsThemeStyles'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 const MAX_ADMIN_FILES = 10
 const MAX_LIST_ID = 999
@@ -111,7 +112,7 @@ function Quiz() {
   const [adminUploading, setAdminUploading] = useState(false)
   const [adminUploadMessage, setAdminUploadMessage] = useState('')
   const adminFileInputRef = useRef(null)
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
   const [quizRows, setQuizRows] = useState([])
   const [quizHasMore, setQuizHasMore] = useState(false)
   const [quizPage, setQuizPage] = useState(0)

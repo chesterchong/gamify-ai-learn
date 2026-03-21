@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 const MAX_FILES = 10
 
@@ -16,7 +17,7 @@ function QuizUpload() {
   const [user, setUser] = useState(null)
   const [authReady, setAuthReady] = useState(false)
   const fileInputRef = useRef(null)
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   useEffect(() => {
     let m = true

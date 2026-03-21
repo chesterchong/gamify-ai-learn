@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { gsap } from 'gsap'
 import supabase from '../lib/supabase'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 import { GravityStarsBackground } from './animate-ui/components/backgrounds/gravity-stars'
 import ShinyText from './ShinyText'
 
@@ -18,7 +19,7 @@ function Signup() {
   const [authSuccess, setAuthSuccess] = useState(false)
   const [error, setError] = useState('')
   
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
   const googleButtonRef = useRef(null)
   const googleFillRef = useRef(null)
   const githubButtonRef = useRef(null)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { clearMeCache, writeMeCache } from '../lib/authMeCache.js'
 import supabase from '../lib/supabase'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 const NAV_ITEMS = [
   { to: '/dash', label: 'DASHBOARD' },
@@ -13,7 +14,7 @@ const NAV_ITEMS = [
 function TopNav() {
   const navigate = useNavigate()
   const [status, setStatus] = useState('loading')
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   useEffect(() => {
     let isMounted = true

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PerfectScoreBadge from './PerfectScoreBadge.jsx'
 import TermsThemeStyles from './TermsThemeStyles.jsx'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function formatAccuracy(p) {
   if (p == null || Number.isNaN(p)) return '—'
@@ -92,7 +93,7 @@ function LeaderboardMedal({ rank }) {
 }
 
 function Dashboard() {
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
   const [summary, setSummary] = useState(null)
   const [leaderboard, setLeaderboard] = useState([])
   const [loading, setLoading] = useState(true)

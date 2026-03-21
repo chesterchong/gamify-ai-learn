@@ -5,6 +5,7 @@ import LearningPathOverview from './LearningPathOverview.jsx'
 import ChapterPage from './ChapterPage.jsx'
 import LessonPage from './LessonPage.jsx'
 import TermsThemeStyles from './TermsThemeStyles'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function Learn() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -14,7 +15,7 @@ function Learn() {
   const [selectedLessonId, setSelectedLessonId] = useState(searchParams.get('lessonId'))
   const [courseTitle, setCourseTitle] = useState('')
   const [moduleCache, setModuleCache] = useState({})
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   useEffect(() => {
     const view = searchParams.get('view') || 'overview'

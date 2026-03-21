@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import ProfileShareModal from './ProfileShareModal.jsx'
 import TermsThemeStyles from './TermsThemeStyles'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 const XP_MILESTONE = 500
 
@@ -12,7 +13,7 @@ function Profile() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [courseStats, setCourseStats] = useState({ completed: 0, total: 0 })
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   const loadUser = useCallback(
     async (opts = { silent: false }) => {

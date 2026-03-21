@@ -14,6 +14,11 @@ import prisma from './db/prisma.js'
 const app = express()
 const port = process.env.PORT || 4000
 
+/** Cross-origin SPA (e.g. Vercel) + API on another host needs SameSite=None; Secure. */
+const sessionCookiesCrossSite =
+  process.env.NODE_ENV === 'production' ||
+  process.env.SESSION_CROSS_SITE_COOKIES === 'true'
+
 if (process.env.VERCEL) {
   app.set('trust proxy', 1)
 }
@@ -44,8 +49,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: sessionCookiesCrossSite ? 'none' : 'lax',
+      secure: sessionCookiesCrossSite,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),

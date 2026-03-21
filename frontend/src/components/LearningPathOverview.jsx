@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
 function LearningPathOverview({ onOpenModule }) {
   const [courses, setCourses] = useState([])
@@ -9,7 +10,7 @@ function LearningPathOverview({ onOpenModule }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+  const apiBaseUrl = getApiBaseUrl()
 
   useEffect(() => {
     const fetchCourses = async () => {
