@@ -596,16 +596,15 @@ function Quiz() {
                             View
                           </Link>
                         )}
-                        <button
-                          type="button"
+                        <Link
+                          to={`/quiz/run/${row.collectionId}`}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
                           aria-label={`Run AI quiz ${row.collectionId}`}
-                          title="Run quiz (coming soon)"
-                          data-purpose="ai-quiz-run-placeholder"
+                          data-purpose="ai-quiz-run"
                         >
                           <span className="material-symbols-outlined text-[14px]">play_arrow</span>
                           Run
-                        </button>
+                        </Link>
                       </div>
                     </div>
                     )

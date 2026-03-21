@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
+import { formatEstimatedQuizTime } from '../lib/quizRunUtils.js'
 
 function QuizAiCollection() {
   const { collectionId } = useParams()
@@ -102,15 +103,10 @@ function QuizAiCollection() {
         {collection && (
           <div className="glass-card rounded-2xl border border-slate-200/50 dark:border-slate-700/50 p-6 md:p-8 space-y-6">
             <header>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                AI-generated collection
-              </p>
               <h1 className="text-xl font-bold text-white">{collection.title}</h1>
-              {collection.courseNote && (
-                <p className="text-sm text-slate-400 mt-2">{collection.courseNote}</p>
-              )}
               <p className="text-xs text-slate-500 mt-2">
-                {collection.questions?.length ?? 0} questions · {collection.model || 'Gemini'}
+                {collection.questions?.length ?? 0} questions · Est.{' '}
+                {formatEstimatedQuizTime(collection.questions?.length ?? 0)}
               </p>
             </header>
             <ol className="space-y-8 list-decimal list-inside marker:text-primary marker:font-bold">

@@ -67,6 +67,7 @@ const toSafeUser = (user) => ({
   username: user.username,
   professionalRole: user.professionalRole,
   profilePhotoUrl: user.profilePhotoUrl,
+  aiQuizSubmissionCount: user.aiQuizSubmissionCount ?? 0,
 })
 
 router.post('/register', async (req, res, next) => {

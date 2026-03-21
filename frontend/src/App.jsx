@@ -9,6 +9,7 @@ import Profile from './components/Profile.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Quiz from './components/Quiz.jsx'
 import QuizAiCollection from './components/QuizAiCollection.jsx'
+import QuizAiRun from './components/QuizAiRun.jsx'
 import QuizUpload from './components/QuizUpload.jsx'
 import Terms from './components/Terms.jsx'
 import Signup from './components/signup.jsx'
@@ -67,6 +68,14 @@ function App() {
           element={
             <ProtectedRoute>
               <QuizAiCollection />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/quiz/run/:collectionId"
+          element={
+            <ProtectedRoute>
+              <QuizAiRun />
             </ProtectedRoute>
           }
         />

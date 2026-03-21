@@ -42,6 +42,11 @@ function splitStoragePath(relativePath) {
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase
  * @param {string} relativePath
  */
+function choiceArrayFromJson(choices) {
+  if (!Array.isArray(choices)) return []
+  return choices.map((c) => String(c))
+}
+
 async function downloadImportFileBuffer(supabase, relativePath) {
   const { bucket, objectPath } = splitStoragePath(relativePath)
   const { data, error } = await supabase.storage.from(bucket).download(objectPath)
@@ -205,12 +210,212 @@ router.get('/ai-collections', requireAuth, async (req, res, next) => {
 })
 
 /**
+ * GET /api/quiz/ai-collections/:collectionId/my-submissions
+ * Current user's past attempts on this quiz (for score history). Any authenticated user.
+ */
+router.get(
+  '/ai-collections/:collectionId/my-submissions',
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const { collectionId } = req.params
+      const col = await prisma.aiQuizCollection.findUnique({
+        where: { id: collectionId },
+        select: { id: true },
+      })
+      if (!col) {
+        return res.status(404).json({ error: 'Collection not found' })
+      }
+      const [attemptCount, rows] = await prisma.$transaction([
+        prisma.aiQuizSubmission.count({
+          where: { userId: req.user.id, collectionId },
+        }),
+        prisma.aiQuizSubmission.findMany({
+          where: { userId: req.user.id, collectionId },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+          select: {
+            id: true,
+            score: true,
+            totalQuestions: true,
+            createdAt: true,
+          },
+        }),
+      ])
+      return res.json({
+        attemptCount,
+        attempts: rows.map((r) => ({
+          id: r.id,
+          score: r.score,
+          total: r.totalQuestions,
+          createdAt: r.createdAt,
+        })),
+      })
+    } catch (err) {
+      return next(err)
+    }
+  },
+)
+
+/**
+ * GET /api/quiz/ai-collections/:collectionId/play
+ * Questions for taking the quiz (no correct answers). Any authenticated user.
+ */
+router.get('/ai-collections/:collectionId/play', requireAuth, async (req, res, next) => {
+  try {
+    const { collectionId } = req.params
+    const col = await prisma.aiQuizCollection.findUnique({
+      where: { id: collectionId },
+      include: {
+        questions: {
+          orderBy: { orderIndex: 'asc' },
+          select: { id: true, stem: true, choices: true },
+        },
+      },
+    })
+    if (!col) {
+      return res.status(404).json({ error: 'Collection not found' })
+    }
+    return res.json({
+      title: col.title,
+      questions: col.questions.map((q) => ({
+        id: q.id,
+        stem: q.stem,
+        choices: choiceArrayFromJson(q.choices),
+      })),
+    })
+  } catch (err) {
+    return next(err)
+  }
+})
+
+/**
+ * POST /api/quiz/ai-collections/:collectionId/submit
+ * Body: { answers: [{ questionId, selectedOriginalIndex }] } (indices in DB choice order)
+ * Grades server-side, saves submission for analytics (Postgres / Supabase).
+ */
+router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res, next) => {
+  try {
+    const { collectionId } = req.params
+    const answers = req.body?.answers
+
+    const col = await prisma.aiQuizCollection.findUnique({
+      where: { id: collectionId },
+      include: {
+        questions: { orderBy: { orderIndex: 'asc' } },
+      },
+    })
+    if (!col) {
+      return res.status(404).json({ error: 'Collection not found' })
+    }
+    if (!Array.isArray(answers)) {
+      return res.status(400).json({ error: 'answers must be an array' })
+    }
+    if (answers.length !== col.questions.length) {
+      return res.status(400).json({ error: 'Submit exactly one answer per question.' })
+    }
+
+    const byQuestionId = new Map(col.questions.map((q) => [q.id, q]))
+    const seen = new Set()
+
+    for (const a of answers) {
+      if (!a || typeof a.questionId !== 'string') {
+        return res.status(400).json({ error: 'Each answer needs questionId' })
+      }
+      if (seen.has(a.questionId)) {
+        return res.status(400).json({ error: 'Duplicate questionId in answers' })
+      }
+      seen.add(a.questionId)
+      const q = byQuestionId.get(a.questionId)
+      if (!q) {
+        return res.status(400).json({ error: `Unknown question: ${a.questionId}` })
+      }
+      const choiceList = choiceArrayFromJson(q.choices)
+      const sel = a.selectedOriginalIndex
+      if (typeof sel !== 'number' || !Number.isInteger(sel) || sel < 0 || sel >= choiceList.length) {
+        return res.status(400).json({ error: 'Invalid selectedOriginalIndex' })
+      }
+    }
+
+    if (seen.size !== col.questions.length) {
+      return res.status(400).json({ error: 'Missing answers for some questions' })
+    }
+
+    const detailAnswers = []
+    let score = 0
+
+    for (const q of col.questions) {
+      const a = answers.find((x) => x.questionId === q.id)
+      const choiceList = choiceArrayFromJson(q.choices)
+      const selectedOriginalIndex = a.selectedOriginalIndex
+      const isCorrect = selectedOriginalIndex === q.correctIndex
+      if (isCorrect) score += 1
+      detailAnswers.push({
+        questionId: q.id,
+        stem: q.stem,
+        selectedOriginalIndex,
+        correctOriginalIndex: q.correctIndex,
+        isCorrect,
+        choiceTexts: choiceList,
+        selectedText: choiceList[selectedOriginalIndex] ?? null,
+        correctText: choiceList[q.correctIndex] ?? null,
+        explanation: q.explanation ?? null,
+      })
+    }
+
+    const lifetimeAiQuizSubmissions = await prisma.$transaction(async (tx) => {
+      await tx.aiQuizSubmission.create({
+        data: {
+          userId: req.user.id,
+          collectionId: col.id,
+          score,
+          totalQuestions: col.questions.length,
+          detailJson: {
+            schemaVersion: 1,
+            userId: req.user.id,
+            collectionId: col.id,
+            collectionTitle: col.title,
+            courseNote: col.courseNote,
+            model: col.model ?? null,
+            submittedAt: new Date().toISOString(),
+            answers: detailAnswers,
+          },
+        },
+      })
+      const u = await tx.user.update({
+        where: { id: req.user.id },
+        data: { aiQuizSubmissionCount: { increment: 1 } },
+        select: { aiQuizSubmissionCount: true },
+      })
+      return u.aiQuizSubmissionCount
+    })
+
+    return res.status(201).json({
+      ok: true,
+      score,
+      total: col.questions.length,
+      lifetimeAiQuizSubmissions,
+      results: detailAnswers.map((d) => ({
+        questionId: d.questionId,
+        isCorrect: d.isCorrect,
+        selectedOriginalIndex: d.selectedOriginalIndex,
+        correctOriginalIndex: d.correctOriginalIndex,
+        explanation: d.explanation,
+      })),
+    })
+  } catch (err) {
+    return next(err)
+  }
+})
+
+/**
  * GET /api/quiz/ai-collections/:collectionId
- * Full collection with ordered questions. Any authenticated user.
+ * Full collection with ordered questions (includes answers). Admin only.
  */
 router.get(
   '/ai-collections/:collectionId',
   requireAuth,
+  requireAdmin,
   async (req, res, next) => {
     try {
       const { collectionId } = req.params
