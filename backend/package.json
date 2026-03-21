@@ -11,7 +11,8 @@
     "postinstall": "prisma generate",
     "build": "prisma generate",
     "seed": "node prisma/seed.js",
-    "update-dsa-lock": "node prisma/update-dsa-lock.js"
+    "update-dsa-lock": "node prisma/update-dsa-lock.js",
+    "clear-quiz-imports": "node scripts/clear-quiz-imports.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -21,6 +22,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@supabase/supabase-js": "^2.93.3",

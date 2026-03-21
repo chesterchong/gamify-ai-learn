@@ -30,6 +30,7 @@ model User {
   moduleProgress     UserModuleProgress[]
   lessonProgress     UserLessonProgress[]
   quizImportBatches  QuizImportBatch[]
+  aiQuizCollections  AiQuizCollection[]
 }
 
 model Course {
@@ -132,6 +133,35 @@ model QuizImportBatch {
   courseNote String?  @db.Text
   createdAt  DateTime @default(now())
   files      QuizImportFile[]
+  aiQuizCollections AiQuizCollection[]
+}
+
+/// AI-generated MCQ set from imported files (Path A: Gemini file → JSON → DB).
+model AiQuizCollection {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batchId    String?
+  batch      QuizImportBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  title      String
+  courseNote String?  @db.Text
+  model      String?
+  createdAt  DateTime @default(now())
+  questions  AiQuizQuestion[]
+}
+
+model AiQuizQuestion {
+  id            String           @id @default(cuid())
+  collectionId  String
+  collection    AiQuizCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  orderIndex    Int
+  stem          String           @db.Text
+  choices       Json
+  correctIndex  Int
+  explanation   String?          @db.Text
+  sourceSnippet String?          @db.Text
+
+  @@index([collectionId])
 }
 
 model QuizImportFile {

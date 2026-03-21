@@ -1,8 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { clearMeCache, readMeCache, writeMeCache } from '../lib/authMeCache.js'
 import TermsThemeStyles from './TermsThemeStyles'
 
 const MAX_ADMIN_FILES = 10
+const MAX_LIST_ID = 999
+
+function formatListId(n) {
+  const clamped = Math.min(Math.max(1, Math.floor(n)), MAX_LIST_ID)
+  return String(clamped).padStart(3, '0')
+}
+
+/** Parse single "Code/Title" field for display (code chip + title). */
+function parseCourseFromNote(note) {
+  const t = (note || '').trim()
+  if (!t) return { code: '—', title: '' }
+  const bar = t.split(/\s*\|\s*/, 2)
+  if (bar.length === 2 && bar[0] && bar[1]) {
+    return { code: bar[0].trim().toUpperCase(), title: bar[1].trim() }
+  }
+  const dash = t.split(/\s+[-–—]\s+/, 2)
+  if (dash.length === 2 && dash[0] && dash[1]) {
+    return { code: dash[0].trim().toUpperCase(), title: dash[1].trim() }
+  }
+  const words = t.split(/\s+/)
+  if (words.length >= 2 && /^[A-Za-z0-9]+$/.test(words[0])) {
+    return { code: words[0].toUpperCase(), title: words.slice(1).join(' ') }
+  }
+  return { code: 'IMPORT', title: t }
+}
 
 // Demo quizzes (Learn seed). Uploaded imports are loaded from GET /api/quiz/import-batches.
 const STATIC_QUIZ_LIST = [
@@ -84,6 +110,12 @@ function Quiz() {
   const adminFileInputRef = useRef(null)
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
   const [importBatches, setImportBatches] = useState([])
+  const [aiCollections, setAiCollections] = useState([])
+  const [batchGenerate, setBatchGenerate] = useState({
+    batchId: null,
+    loading: false,
+    error: '',
+  })
 
   useEffect(() => {
     let mounted = true
@@ -135,29 +167,93 @@ function Quiz() {
     }
   }, [apiBaseUrl, isAdmin])
 
+  const loadAiCollections = useCallback(async () => {
+    if (!isAdmin) return
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/quiz/ai-collections`, {
+        credentials: 'include',
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setAiCollections(Array.isArray(data.collections) ? data.collections : [])
+    } catch {
+      setAiCollections([])
+    }
+  }, [apiBaseUrl, isAdmin])
+
   useEffect(() => {
     if (!authChecked || !isAdmin) return
     loadImportBatches()
-  }, [authChecked, isAdmin, loadImportBatches])
+    loadAiCollections()
+  }, [authChecked, isAdmin, loadImportBatches, loadAiCollections])
+
+  const handleGenerateBatch = async (batchId) => {
+    setBatchGenerate({ batchId, loading: true, error: '' })
+    try {
+      const res = await fetch(
+        `${apiBaseUrl}/api/quiz/batches/${batchId}/generate-questions`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionCount: 10 }),
+        },
+      )
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setBatchGenerate({
+          batchId,
+          loading: false,
+          error: data.error || `Generate failed (${res.status})`,
+        })
+        return
+      }
+      await loadAiCollections()
+      setBatchGenerate({ batchId: null, loading: false, error: '' })
+    } catch {
+      setBatchGenerate({
+        batchId,
+        loading: false,
+        error: 'Network error',
+      })
+    }
+  }
+
+  const staticIdMax = useMemo(() => {
+    const nums = STATIC_QUIZ_LIST.map((q) => parseInt(q.id, 10)).filter((n) => !Number.isNaN(n))
+    return nums.length ? Math.max(...nums) : 0
+  }, [])
 
   const nextDraftId = useMemo(() => {
-    const nums = STATIC_QUIZ_LIST.map((q) => parseInt(q.id, 10)).filter((n) => !Number.isNaN(n))
-    const max = nums.length ? Math.max(...nums) : 0
-    return String(max + 1).padStart(3, '0')
-  }, [])
+    return formatListId(staticIdMax + importBatches.length + 1)
+  }, [staticIdMax, importBatches.length])
 
   const tableRows = useMemo(() => {
     const quizzes = STATIC_QUIZ_LIST.map((q) => ({ kind: 'quiz', ...q }))
     if (!isAdmin) return quizzes
-    const imports = importBatches.map((b) => ({
+    const chronological = [...importBatches].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    )
+    const importsChrono = chronological.map((b, index) => ({
       kind: 'import',
       batchId: b.id,
-      displayId: b.id.slice(-6).toUpperCase(),
+      displayId: formatListId(staticIdMax + 1 + index),
       courseNote: typeof b.courseNote === 'string' ? b.courseNote : '',
       files: Array.isArray(b.files) ? b.files : [],
     }))
-    return [...imports, ...quizzes]
-  }, [importBatches, isAdmin])
+    const importsReversed = [...importsChrono].reverse()
+    const aiRows = (Array.isArray(aiCollections) ? aiCollections : []).map((c) => ({
+      kind: 'ai',
+      collectionId: c.id,
+      displayId: (c.id || '').slice(0, 6).toUpperCase() || '—',
+      title: c.title || 'Untitled',
+      courseNote: typeof c.courseNote === 'string' ? c.courseNote : '',
+      questionCount: typeof c.questionCount === 'number' ? c.questionCount : 0,
+      model: c.model || '',
+      createdAt: c.createdAt,
+    }))
+    return [...importsReversed, ...aiRows, ...quizzes]
+  }, [aiCollections, importBatches, isAdmin, staticIdMax])
 
   const normalizedQuery = searchInput.trim().toLowerCase()
   const filteredTableRows = useMemo(() => {
@@ -177,17 +273,29 @@ function Quiz() {
         const matchesCourse = courseStr.includes(normalizedQuery)
         return matchesTitle || matchesModule || matchesStatus || matchesId || matchesCourse
       }
-      const note = (row.courseNote || '').toLowerCase()
-      const matchesNote = note.includes(normalizedQuery)
-      const matchesFile = row.files.some((f) =>
-        (f.originalName || '').toLowerCase().includes(normalizedQuery),
-      )
-      const matchesId =
-        row.batchId.toLowerCase().includes(normalizedQuery) ||
-        row.displayId.toLowerCase().includes(normalizedQuery)
-      const matchesTag =
-        normalizedQuery.length >= 3 && /upload|import|storage/.test(normalizedQuery)
-      return matchesNote || matchesFile || matchesId || matchesTag
+      if (row.kind === 'import') {
+        const note = (row.courseNote || '').toLowerCase()
+        const matchesNote = note.includes(normalizedQuery)
+        const matchesFile = row.files.some((f) =>
+          (f.originalName || '').toLowerCase().includes(normalizedQuery),
+        )
+        const matchesId =
+          row.batchId.toLowerCase().includes(normalizedQuery) ||
+          row.displayId.toLowerCase().includes(normalizedQuery)
+        const matchesTag =
+          normalizedQuery.length >= 3 && /upload|import|storage/.test(normalizedQuery)
+        return matchesNote || matchesFile || matchesId || matchesTag
+      }
+      if (row.kind === 'ai') {
+        const matchesTitle = (row.title || '').toLowerCase().includes(normalizedQuery)
+        const matchesNote = (row.courseNote || '').toLowerCase().includes(normalizedQuery)
+        const matchesId =
+          (row.collectionId || '').toLowerCase().includes(normalizedQuery) ||
+          (row.displayId || '').toLowerCase().includes(normalizedQuery)
+        const matchesAi = normalizedQuery === 'ai' || normalizedQuery.includes('gemini')
+        return matchesTitle || matchesNote || matchesId || matchesAi
+      }
+      return true
     })
   }, [tableRows, normalizedQuery])
 
@@ -209,6 +317,10 @@ function Quiz() {
   }
 
   const submitAdminUpload = async () => {
+    if (!adminCourseDraft.trim()) {
+      setAdminUploadMessage('Enter course code and title (Code/Title field).')
+      return
+    }
     if (adminFiles.length === 0) {
       setAdminUploadMessage('Choose files with UPLOAD, then click Add.')
       return
@@ -337,8 +449,9 @@ function Quiz() {
                         value={adminCourseDraft}
                         onChange={(e) => setAdminCourseDraft(e.target.value)}
                         className="quiz-admin-course-input w-full text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="Enter course code or title…"
-                        aria-label="Course for new quiz"
+                        placeholder="Enter Code/Title"
+                        aria-label="Course code and title"
+                        required
                       />
                     </div>
                     <div className="min-w-0 flex flex-col gap-2 items-start">
@@ -420,35 +533,101 @@ function Quiz() {
                       data-purpose="quiz-import-batch-row"
                     >
                       <div
-                        className="w-10 text-slate-500 dark:text-slate-400 text-xs tabular-nums font-mono"
+                        className="w-10 text-slate-500 dark:text-slate-400 text-xs tabular-nums"
                         title={row.batchId}
                       >
                         {row.displayId}
                       </div>
                       <div className="min-w-0 flex flex-wrap items-center gap-2">
-                        <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 bg-cyan-900/30 text-cyan-300 border-cyan-700/40">
-                          IMPORT
+                        <span
+                          className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 bg-cyan-900/30 text-cyan-300 border-cyan-700/40"
+                          title="Imported batch"
+                        >
+                          {parseCourseFromNote(row.courseNote).code}
                         </span>
                         <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
-                          {row.courseNote || '—'}
+                          {parseCourseFromNote(row.courseNote).title || row.courseNote}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex flex-col gap-1 items-start">
+                        <div className="flex flex-wrap gap-1 justify-start items-center">
+                          <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 text-emerald-400 border-emerald-500/30">
+                            UPLOAD
+                          </span>
+                          {row.files.map((f) => (
+                            <span
+                              key={f.id}
+                              className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-[10rem] truncate border-slate-600/50 text-slate-400"
+                              title={f.originalName}
+                            >
+                              {f.originalName}
+                            </span>
+                          ))}
+                        </div>
+                        {batchGenerate.error && batchGenerate.batchId === row.batchId && (
+                          <p className="text-[10px] text-amber-400 max-w-full">{batchGenerate.error}</p>
+                        )}
+                      </div>
+                      <div className="w-20 text-center text-xs text-slate-500 dark:text-slate-400">—</div>
+                      <div className="w-28 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateBatch(row.batchId)}
+                          disabled={batchGenerate.loading}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors disabled:opacity-50"
+                          aria-label={`Generate quiz from import batch ${row.batchId}`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                          {batchGenerate.loading && batchGenerate.batchId === row.batchId
+                            ? '…'
+                            : 'Generate'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : row.kind === 'ai' ? (
+                    <div
+                      key={`ai-${row.collectionId}`}
+                      className="grid grid-cols-[auto_minmax(0,14rem)_minmax(18rem,1fr)_auto_auto] gap-4 px-6 py-4 items-center transition-colors hover:bg-violet-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
+                      data-purpose="quiz-ai-collection-row"
+                    >
+                      <div
+                        className="w-10 text-slate-500 dark:text-slate-400 text-xs font-mono tabular-nums"
+                        title={row.collectionId}
+                      >
+                        {row.displayId}
+                      </div>
+                      <div className="min-w-0 flex flex-wrap items-center gap-2">
+                        <span
+                          className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 bg-violet-900/30 text-violet-300 border-violet-700/40"
+                          title="AI-generated from imports"
+                        >
+                          {parseCourseFromNote(row.courseNote).code}
+                        </span>
+                        <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
+                          {row.title}
                         </span>
                       </div>
                       <div className="min-w-0 flex flex-wrap gap-1 justify-start items-center">
-                        <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 text-emerald-400 border-emerald-500/30">
-                          UPLOAD
+                        <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 text-violet-300 border-violet-500/30">
+                          GEMINI
                         </span>
-                        {row.files.map((f) => (
-                          <span
-                            key={f.id}
-                            className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-[10rem] truncate border-slate-600/50 text-slate-400"
-                            title={f.originalName}
-                          >
-                            {f.originalName}
-                          </span>
-                        ))}
+                        <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 border-slate-600/50 text-slate-400">
+                          {row.questionCount} Q
+                        </span>
                       </div>
-                      <div className="w-20 text-center text-xs text-slate-500 dark:text-slate-400">—</div>
-                      <div className="w-28 text-right text-xs text-slate-500 dark:text-slate-500">—</div>
+                      <div className="w-20 text-center text-xs text-slate-500 dark:text-slate-400">
+                        ~{Math.max(5, Math.round(row.questionCount * 1.5))} min
+                      </div>
+                      <div className="w-28 text-right">
+                        <Link
+                          to={`/quiz/ai/${row.collectionId}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary border border-primary/50 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-colors"
+                          aria-label={`View AI quiz ${row.collectionId}`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">visibility</span>
+                          View
+                        </Link>
+                      </div>
                     </div>
                   ) : (
                     <div

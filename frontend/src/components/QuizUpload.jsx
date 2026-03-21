@@ -54,6 +54,10 @@ function QuizUpload() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!courseNote.trim()) {
+      setMessage('Enter course code and title (Code/Title).')
+      return
+    }
     if (files.length === 0) {
       setMessage('Select at least one file.')
       return
@@ -121,12 +125,14 @@ function QuizUpload() {
         <div className="glass-card rounded-2xl border border-slate-200/50 dark:border-slate-700/50 p-6 md:p-8">
           <h1 className="text-xl font-bold text-white mb-2">Upload quiz source files</h1>
           <p className="text-sm text-slate-400 mb-6">
-            Up to {MAX_FILES} files per batch. AI will process topics and estimated time later.
+            Up to {MAX_FILES} files per batch. On the Quiz page, use{' '}
+            <span className="text-slate-300 font-semibold">Generate</span> on the import row to build MCQs with Gemini and
+            save them to the database.
           </p>
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2" htmlFor="courseNote">
-                Course (optional note)
+                Code / title <span className="text-amber-500/90">(required)</span>
               </label>
               <input
                 id="courseNote"
@@ -134,7 +140,8 @@ function QuizUpload() {
                 value={courseNote}
                 onChange={(e) => setCourseNote(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-600 text-slate-100 placeholder:text-slate-500 focus:ring-primary focus:border-primary"
-                placeholder="e.g. BACS2063 — Data Structures"
+                placeholder="Enter Code/Title"
+                required
               />
             </div>
             <div>
