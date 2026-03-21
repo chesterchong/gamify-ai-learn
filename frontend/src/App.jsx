@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 
 import AppLayout from './components/AppLayout.jsx'
 import SyncDocumentTitle from './components/SyncDocumentTitle.jsx'
@@ -14,7 +14,6 @@ import QuizAiRun from './components/QuizAiRun.jsx'
 import QuizUpload from './components/QuizUpload.jsx'
 import Terms from './components/Terms.jsx'
 import Signup from './components/signup.jsx'
-import Dash from './components/dash.jsx'
 
 function App() {
   return (
@@ -30,7 +29,7 @@ function App() {
           path="/dash"
           element={
             <ProtectedRoute>
-              <Dash />
+              <Dashboard />
             </ProtectedRoute>
           }
         />
@@ -38,7 +37,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Navigate to="/dash" replace />
+              <Dashboard />
             </ProtectedRoute>
           }
         />

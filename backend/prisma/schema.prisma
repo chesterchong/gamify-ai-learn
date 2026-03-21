@@ -170,6 +170,7 @@ model AiQuizSubmission {
 
   @@index([userId])
   @@index([collectionId])
+  @@index([userId, collectionId])
 }
 
 model AiQuizQuestion {

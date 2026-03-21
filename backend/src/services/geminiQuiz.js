@@ -71,6 +71,13 @@ function parseQuizJson(text) {
   return JSON.parse(raw)
 }
 
+/** Gemini often suffixes titles with " Quiz" after the course name; strip one redundant trailing word. */
+function normalizeGeneratedQuizTitle(rawTitle) {
+  const t = rawTitle.trim()
+  const stripped = t.replace(/\s+quiz$/i, '').trim()
+  return stripped.length > 0 ? stripped : t
+}
+
 /**
  * @param {unknown} data
  * @param {number} requestedCount
@@ -119,7 +126,7 @@ function validateQuizPayload(data, requestedCount) {
     }
   })
   return {
-    title: title.trim(),
+    title: normalizeGeneratedQuizTitle(title),
     questions: questions.map((q) => {
       const o = /** @type {Record<string, unknown>} */ (q)
       return {
@@ -202,10 +209,11 @@ Rules:
 - "correctIndex" is 0-based into the "choices" array.
 - Questions must be answerable from the documents; do not invent facts not grounded in the text.
 - Include "explanation" (brief) and when possible a short "sourceSnippet" quoting the material.
+- "title" must be a concise topic or module name taken from the material or course context (e.g. chapter or course title). Do not append generic words like "Quiz", "MCQ", or "Test" unless those words already appear in the course context above.
 
 Return a JSON object with this exact shape:
 {
-  "title": "short quiz title",
+  "title": "Topic or course name (concise)",
   "questions": [
     {
       "stem": "question text",

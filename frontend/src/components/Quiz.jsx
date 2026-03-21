@@ -5,6 +5,7 @@ import TermsThemeStyles from './TermsThemeStyles'
 
 const MAX_ADMIN_FILES = 10
 const MAX_LIST_ID = 999
+const QUIZ_PAGE_SIZE = 20
 
 function formatListId(n) {
   const clamped = Math.min(Math.max(1, Math.floor(n)), MAX_LIST_ID)
@@ -70,6 +71,32 @@ function codeChipClassForCourseCode(code) {
   return CODE_STATUS_CHIP_PALETTE[h % CODE_STATUS_CHIP_PALETTE.length]
 }
 
+/** Compact file count e.g. [3]; tooltip lists original names (one per line). */
+function fileCountDisplay(files) {
+  const list = Array.isArray(files) ? files : []
+  const n = list.length
+  const tooltip =
+    n === 0
+      ? 'No source files'
+      : list.map((f) => (f.originalName || '').trim() || '(unnamed)').join('\n')
+  return { n, label: `[${n}]`, tooltip }
+}
+
+/** Imports first (pending-without-generate on top), then AI rows; matches API (search view). */
+function sortQuizTableRows(rows) {
+  return [...rows].sort((a, b) => {
+    const aImp = a.kind === 'import' ? 1 : 0
+    const bImp = b.kind === 'import' ? 1 : 0
+    if (aImp !== bImp) return bImp - aImp
+    const aPending = a.kind === 'import' && !a.hasGeneratedQuiz
+    const bPending = b.kind === 'import' && !b.hasGeneratedQuiz
+    if (aPending !== bPending) return aPending ? -1 : 1
+    const ta = new Date(a.createdAt || 0).getTime()
+    const tb = new Date(b.createdAt || 0).getTime()
+    return tb - ta
+  })
+}
+
 function Quiz() {
   const [searchInput, setSearchInput] = useState('')
   const [user, setUser] = useState(() => {
@@ -85,8 +112,11 @@ function Quiz() {
   const [adminUploadMessage, setAdminUploadMessage] = useState('')
   const adminFileInputRef = useRef(null)
   const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-  const [importBatches, setImportBatches] = useState([])
-  const [aiCollections, setAiCollections] = useState([])
+  const [quizRows, setQuizRows] = useState([])
+  const [quizHasMore, setQuizHasMore] = useState(false)
+  const [quizPage, setQuizPage] = useState(0)
+  const [totalImportCount, setTotalImportCount] = useState(0)
+  const [tableLoading, setTableLoading] = useState(false)
   const [batchGenerate, setBatchGenerate] = useState({
     batchId: null,
     loading: false,
@@ -102,17 +132,22 @@ function Quiz() {
     let mounted = true
     const load = async () => {
       try {
-        const res = await fetch(`${apiBaseUrl}/api/auth/me`, { credentials: 'include' })
+        const meRes = await fetch(`${apiBaseUrl}/api/auth/me`, {
+          credentials: 'include',
+          cache: 'no-store',
+        })
         if (!mounted) return
-        if (res.ok) {
-          const data = await res.json()
-          const u = data.user || null
-          if (u) writeMeCache(u)
-          setUser(u)
+
+        let nextUser = null
+        if (meRes.ok) {
+          const data = await meRes.json()
+          nextUser = data.user || null
+          if (nextUser) writeMeCache(nextUser)
+          else clearMeCache()
         } else {
           clearMeCache()
-          setUser(null)
         }
+        setUser(nextUser)
       } catch {
         if (mounted) {
           clearMeCache()
@@ -128,48 +163,78 @@ function Quiz() {
     }
   }, [apiBaseUrl])
 
+  useEffect(() => {
+    if (!authChecked) return
+    if (!user) {
+      setQuizPage(0)
+      setQuizRows([])
+      setQuizHasMore(false)
+      setTotalImportCount(0)
+      setTableLoading(false)
+      return
+    }
+    let mounted = true
+    setTableLoading(true)
+    const load = async () => {
+      try {
+        const res = await fetch(
+          `${apiBaseUrl}/api/quiz/table?page=${quizPage}&limit=${QUIZ_PAGE_SIZE}`,
+          { credentials: 'include', cache: 'no-store' },
+        )
+        if (!mounted || !res.ok) return
+        const td = await res.json().catch(() => ({}))
+        setQuizRows(Array.isArray(td.rows) ? td.rows : [])
+        setQuizHasMore(Boolean(td.hasMore))
+        if (typeof td.totalImportCount === 'number') {
+          setTotalImportCount(td.totalImportCount)
+        }
+      } catch {
+        if (mounted) setQuizRows([])
+      } finally {
+        if (mounted) setTableLoading(false)
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [apiBaseUrl, authChecked, user, quizPage])
+
   const isAdmin = Boolean(
     user &&
       (user.role?.toLowerCase() === 'admin' ||
         user.professionalRole?.toLowerCase() === 'admin'),
   )
 
-  const loadImportBatches = useCallback(async () => {
-    if (!isAdmin) return
-    try {
-      const res = await fetch(`${apiBaseUrl}/api/quiz/import-batches`, {
-        credentials: 'include',
-      })
-      if (!res.ok) return
-      const data = await res.json()
-      setImportBatches(Array.isArray(data.batches) ? data.batches : [])
-    } catch {
-      setImportBatches([])
-    }
-  }, [apiBaseUrl, isAdmin])
-
-  const loadAiCollections = useCallback(async () => {
-    try {
-      const res = await fetch(`${apiBaseUrl}/api/quiz/ai-collections`, {
-        credentials: 'include',
-      })
-      if (!res.ok) return
-      const data = await res.json()
-      setAiCollections(Array.isArray(data.collections) ? data.collections : [])
-    } catch {
-      setAiCollections([])
-    }
-  }, [apiBaseUrl])
-
-  useEffect(() => {
-    if (!authChecked || !user) return
-    loadAiCollections()
-  }, [authChecked, user, loadAiCollections])
-
-  useEffect(() => {
-    if (!authChecked || !isAdmin) return
-    loadImportBatches()
-  }, [authChecked, isAdmin, loadImportBatches])
+  const refreshQuizTable = useCallback(
+    async (pageOverride) => {
+      if (!user) return
+      const page = typeof pageOverride === 'number' ? pageOverride : quizPage
+      setTableLoading(true)
+      try {
+        const res = await fetch(
+          `${apiBaseUrl}/api/quiz/table?page=${page}&limit=${QUIZ_PAGE_SIZE}`,
+          { credentials: 'include', cache: 'no-store' },
+        )
+        if (!res.ok) return
+        const td = await res.json().catch(() => ({}))
+        const rows = Array.isArray(td.rows) ? td.rows : []
+        setQuizRows(rows)
+        setQuizHasMore(Boolean(td.hasMore))
+        if (typeof td.totalImportCount === 'number') {
+          setTotalImportCount(td.totalImportCount)
+        }
+        if (rows.length === 0 && page > 0) {
+          setQuizPage((prev) => (prev === page ? Math.max(0, prev - 1) : prev))
+        }
+      } catch {
+        setQuizRows([])
+      } finally {
+        setTableLoading(false)
+      }
+    },
+    [apiBaseUrl, user, quizPage],
+  )
 
   const handleGenerateBatch = async (batchId) => {
     setBatchGenerate({ batchId, loading: true, error: '' })
@@ -192,7 +257,8 @@ function Quiz() {
         })
         return
       }
-      await loadAiCollections()
+      if (quizPage === 0) await refreshQuizTable(0)
+      else setQuizPage(0)
       setBatchGenerate({ batchId: null, loading: false, error: '' })
     } catch {
       setBatchGenerate({
@@ -204,43 +270,45 @@ function Quiz() {
   }
 
   const nextDraftId = useMemo(() => {
-    return formatListId(importBatches.length + 1)
-  }, [importBatches.length])
+    return formatListId(totalImportCount + 1)
+  }, [totalImportCount])
 
   const tableRows = useMemo(() => {
-    const aiRows = (Array.isArray(aiCollections) ? aiCollections : []).map((c) => ({
-      kind: 'ai',
-      collectionId: c.id,
-      displayId: (c.id || '').slice(0, 6).toUpperCase() || '—',
-      title: c.title || 'Untitled',
-      courseCode: typeof c.courseCode === 'string' ? c.courseCode : '',
-      courseNote: typeof c.courseNote === 'string' ? c.courseNote : '',
-      questionCount: typeof c.questionCount === 'number' ? c.questionCount : 0,
-      model: c.model || '',
-      createdAt: c.createdAt,
-      files: Array.isArray(c.sourceFiles) ? c.sourceFiles : [],
-      userHasPerfectScore: Boolean(c.userHasPerfectScore),
-    }))
-    if (!isAdmin) return aiRows
-    const chronological = [...importBatches].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    )
-    const importsChrono = chronological.map((b, index) => ({
-      kind: 'import',
-      batchId: b.id,
-      displayId: formatListId(1 + index),
-      courseCode: typeof b.courseCode === 'string' ? b.courseCode : '',
-      courseNote: typeof b.courseNote === 'string' ? b.courseNote : '',
-      files: Array.isArray(b.files) ? b.files : [],
-    }))
-    const importsReversed = [...importsChrono].reverse()
-    return [...importsReversed, ...aiRows]
-  }, [aiCollections, importBatches, isAdmin])
+    const offset = quizPage * QUIZ_PAGE_SIZE
+    return (Array.isArray(quizRows) ? quizRows : []).map((r, i) => {
+      if (r.kind === 'import') {
+        return {
+          kind: 'import',
+          batchId: r.batchId,
+          displayId: formatListId(offset + i + 1),
+          courseCode: typeof r.courseCode === 'string' ? r.courseCode : '',
+          courseNote: typeof r.courseNote === 'string' ? r.courseNote : '',
+          files: Array.isArray(r.files) ? r.files : [],
+          hasGeneratedQuiz: Boolean(r.hasGeneratedQuiz),
+          createdAt: r.createdAt,
+        }
+      }
+      return {
+        kind: 'ai',
+        collectionId: r.collectionId,
+        displayId: (r.collectionId || '').slice(0, 6).toUpperCase() || '—',
+        title: r.title || 'Untitled',
+        courseCode: typeof r.courseCode === 'string' ? r.courseCode : '',
+        courseNote: typeof r.courseNote === 'string' ? r.courseNote : '',
+        model: typeof r.model === 'string' ? r.model : '',
+        createdAt: r.createdAt,
+        files: Array.isArray(r.sourceFiles) ? r.sourceFiles : [],
+        userHasPerfectScore: Boolean(r.userHasPerfectScore),
+        hasGeneratedQuiz: true,
+      }
+    })
+  }, [quizRows, quizPage])
 
   const normalizedQuery = searchInput.trim().toLowerCase()
-  const filteredTableRows = useMemo(() => {
-    if (!normalizedQuery) return tableRows
-    return tableRows.filter((row) => {
+  const visibleTableRows = useMemo(() => {
+    const filtered = !normalizedQuery
+      ? tableRows
+      : tableRows.filter((row) => {
       if (row.kind === 'import') {
         const { code: rowCode, title: rowTitle } = importRowCodeTitle(row)
         const note = (row.courseNote || '').toLowerCase()
@@ -295,6 +363,7 @@ function Quiz() {
       }
       return false
     })
+    return sortQuizTableRows(filtered)
   }, [tableRows, normalizedQuery])
 
   const openAdminFilePicker = () => {
@@ -379,7 +448,7 @@ function Quiz() {
           setRowActionError(data.error || `Save failed (${res.status})`)
           return
         }
-        await loadImportBatches()
+        await refreshQuizTable()
       } else {
         const res = await fetch(
           `${apiBaseUrl}/api/quiz/ai-collections/${editing.id}`,
@@ -398,7 +467,7 @@ function Quiz() {
           setRowActionError(data.error || `Save failed (${res.status})`)
           return
         }
-        await loadAiCollections()
+        await refreshQuizTable()
       }
       setEditing(null)
     } catch {
@@ -430,7 +499,7 @@ function Quiz() {
         return
       }
       if (editing?.kind === 'import' && editing.id === batchId) setEditing(null)
-      await loadImportBatches()
+      await refreshQuizTable()
     } catch {
       setRowActionError('Network error.')
     } finally {
@@ -463,7 +532,7 @@ function Quiz() {
         return
       }
       if (editing?.kind === 'ai' && editing.id === collectionId) setEditing(null)
-      await loadAiCollections()
+      await refreshQuizTable()
     } catch {
       setRowActionError('Network error.')
     } finally {
@@ -510,7 +579,8 @@ function Quiz() {
       setAdminCodeDraft('')
       setAdminTitleDraft('')
       if (adminFileInputRef.current) adminFileInputRef.current.value = ''
-      await loadImportBatches()
+      if (quizPage === 0) await refreshQuizTable(0)
+      else setQuizPage(0)
     } catch {
       setAdminUploadMessage('Network error. Try again.')
     } finally {
@@ -592,7 +662,7 @@ function Quiz() {
               className="glass-card rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto"
               data-purpose="quiz-log"
             >
-              <div className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-[10px] sm:text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
+              <div className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-[10px] sm:text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
                 <div className="w-10 text-left">Id</div>
                 <div className="min-w-0">Code</div>
                 <div className="min-w-0">Course</div>
@@ -607,7 +677,7 @@ function Quiz() {
               <div className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
                 {isAdmin && (
                   <div
-                    className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center bg-primary/5 border-b border-primary/20"
+                    className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center bg-primary/5 border-b border-primary/20"
                     data-purpose="admin-new-quiz-row"
                   >
                     <div className="w-10 text-slate-500 dark:text-slate-400 text-xs tabular-nums select-none" title="Assigned when quiz is created">
@@ -700,7 +770,7 @@ function Quiz() {
                     </div>
                   </div>
                 )}
-                {filteredTableRows.map((row) => {
+                {visibleTableRows.map((row) => {
                   if (row.kind === 'import') {
                     const { code: importCode, title: importTitle } = importRowCodeTitle(row)
                     const editingThis =
@@ -708,11 +778,18 @@ function Quiz() {
                     const busySave = isRowBusy('import', row.batchId, 'save')
                     const busyDel = isRowBusy('import', row.batchId, 'delete')
                     const rowDisabled = busySave || busyDel
+                    const pendingGeneration = !row.hasGeneratedQuiz
+                    const importFileCount = fileCountDisplay(row.files)
                     return (
                     <div
                       key={`import-${row.batchId}`}
-                      className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center transition-colors hover:bg-cyan-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
+                      className={`grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center transition-colors group ${
+                        pendingGeneration
+                          ? 'bg-amber-500/[0.09] dark:bg-amber-950/35 hover:bg-amber-500/[0.14] dark:hover:bg-amber-950/45 ring-1 ring-inset ring-amber-500/20'
+                          : 'bg-slate-500/5 dark:bg-slate-900/40 hover:bg-cyan-500/5'
+                      }`}
                       data-purpose="quiz-import-batch-row"
+                      data-pending-generation={pendingGeneration ? 'true' : undefined}
                     >
                       <div
                         className="w-10 text-slate-500 dark:text-slate-400 text-xs tabular-nums"
@@ -744,7 +821,10 @@ function Quiz() {
                           </span>
                         )}
                       </div>
-                      <div className="min-w-0 text-xs text-slate-600 dark:text-slate-300 truncate">
+                      <div
+                        className="min-w-0 text-xs text-slate-600 dark:text-slate-300 truncate"
+                        title={!editingThis && importTitle ? importTitle : undefined}
+                      >
                         {editingThis ? (
                           <input
                             type="text"
@@ -765,15 +845,12 @@ function Quiz() {
                       </div>
                       <div className="min-w-0 flex flex-col gap-1 items-start">
                         <div className="flex flex-wrap gap-1 justify-start items-center">
-                          {row.files.map((f) => (
-                            <span
-                              key={f.id}
-                              className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-[10rem] truncate border-slate-600/50 text-slate-400"
-                              title={f.originalName}
-                            >
-                              {f.originalName}
-                            </span>
-                          ))}
+                          <span
+                            className="text-[10px] font-bold tabular-nums text-slate-400 border border-slate-600/50 px-1.5 py-0.5 rounded"
+                            title={importFileCount.tooltip}
+                          >
+                            {importFileCount.label}
+                          </span>
                         </div>
                         {batchGenerate.error && batchGenerate.batchId === row.batchId && (
                           <p className="text-[10px] text-amber-400 max-w-full">{batchGenerate.error}</p>
@@ -846,10 +923,11 @@ function Quiz() {
                     const busySave = isRowBusy('ai', row.collectionId, 'save')
                     const busyDel = isRowBusy('ai', row.collectionId, 'delete')
                     const rowDisabled = busySave || busyDel
+                    const aiFileCount = fileCountDisplay(row.files)
                     return (
                     <div
                       key={`ai-${row.collectionId}`}
-                      className="grid grid-cols-[2.5rem_minmax(0,7rem)_minmax(0,16rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center transition-colors hover:bg-violet-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
+                      className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center transition-colors hover:bg-violet-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
                       data-purpose="quiz-ai-collection-row"
                     >
                       <div
@@ -881,24 +959,15 @@ function Quiz() {
                             {aiCode}
                           </span>
                         )}
-                        {row.userHasPerfectScore && (
-                          <span
-                            className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border border-amber-400/45 text-amber-200 bg-amber-500/[0.12] shadow-[0_0_12px_-4px_rgba(251,191,36,0.35)] shrink-0"
-                            title="You scored 100% on this quiz at least once"
-                            data-purpose="ai-quiz-max-score-badge"
-                          >
-                            <span
-                              className="material-symbols-outlined text-[13px] text-amber-300"
-                              style={{ fontVariationSettings: "'FILL' 1" }}
-                              aria-hidden
-                            >
-                              military_tech
-                            </span>
-                            Max
-                          </span>
-                        )}
                       </div>
-                      <div className="min-w-0 text-xs text-slate-600 dark:text-slate-300 truncate">
+                      <div
+                        className={`min-w-0 text-xs truncate ${
+                          row.userHasPerfectScore && !editingThis
+                            ? ''
+                            : 'text-slate-600 dark:text-slate-300'
+                        }`}
+                        title={!editingThis && row.title ? row.title : undefined}
+                      >
                         {editingThis ? (
                           <input
                             type="text"
@@ -913,22 +982,24 @@ function Quiz() {
                             className="quiz-admin-course-input w-full text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
                             aria-label="Edit quiz title"
                           />
+                        ) : row.userHasPerfectScore ? (
+                          <span
+                            className="inline-block max-w-full truncate font-semibold text-amber-100 drop-shadow-[0_0_10px_rgba(251,191,36,0.45)]"
+                            aria-label={`${row.title}. You scored 100% on this quiz at least once.`}
+                            data-purpose="ai-quiz-perfect-title"
+                          >
+                            {row.title}
+                          </span>
                         ) : (
                           row.title
                         )}
                       </div>
                       <div className="min-w-0 flex flex-wrap gap-1 justify-start items-center">
-                        {row.files.map((f) => (
-                          <span
-                            key={f.id}
-                            className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 max-w-[10rem] truncate border-slate-600/50 text-slate-400"
-                            title={f.originalName}
-                          >
-                            {f.originalName}
-                          </span>
-                        ))}
-                        <span className="text-[9px] border px-1.5 py-0.5 rounded shrink-0 border-slate-600/50 text-slate-400">
-                          {row.questionCount} Q
+                        <span
+                          className="text-[10px] font-bold tabular-nums text-slate-400 border border-slate-600/50 px-1.5 py-0.5 rounded"
+                          title={aiFileCount.tooltip}
+                        >
+                          {aiFileCount.label}
                         </span>
                       </div>
                       <div className="text-right flex flex-wrap items-center justify-end gap-1.5">
@@ -1006,12 +1077,47 @@ function Quiz() {
                   return null
                 })}
               </div>
+              {user && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-3 border-t border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                    Page {quizPage + 1}
+                    {tableLoading ? (
+                      <span className="ml-2 text-slate-400">Loading…</span>
+                    ) : null}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={quizPage === 0 || tableLoading}
+                      onClick={() => setQuizPage((p) => Math.max(0, p - 1))}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-slate-300 border border-slate-500/50 bg-slate-800/50 hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!quizHasMore || tableLoading}
+                      onClick={() => setQuizPage((p) => p + 1)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-primary border border-primary/45 bg-primary/10 hover:bg-primary/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
             )}
 
-            {authChecked && filteredTableRows.length === 0 && (
+            {authChecked &&
+              user &&
+              visibleTableRows.length === 0 &&
+              !tableLoading && (
               <div className="rounded-2xl glass border border-dashed border-slate-300/50 dark:border-slate-600/50 p-6 text-center text-slate-500 dark:text-slate-400">
-                No quizzes match your search.
+                {normalizedQuery
+                  ? 'No quizzes match your search on this page.'
+                  : quizRows.length === 0
+                    ? 'No quizzes yet.'
+                    : 'No quizzes match your search on this page.'}
               </div>
             )}
           </div>

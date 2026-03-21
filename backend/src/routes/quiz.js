@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
+import { Prisma } from '@prisma/client'
 import { createClient } from '@supabase/supabase-js'
 import prisma from '../db/prisma.js'
 import requireAuth from '../middleware/requireAuth.js'
@@ -85,6 +86,7 @@ router.get('/import-batches', requireAuth, requireAdmin, async (req, res, next) 
         files: { orderBy: { id: 'asc' } },
       },
     })
+    res.set('Cache-Control', 'private, no-store')
     return res.json({ batches })
   } catch (err) {
     return next(err)
@@ -263,6 +265,179 @@ router.post(
   },
 )
 
+const QUIZ_TABLE_LIMIT_MAX = 20
+
+/**
+ * GET /api/quiz/table
+ * Paginated rows for the Quiz page: imports + AI collections merged by createdAt (newest first).
+ * Admins see both; learners see AI collections only. Query: page (0-based), limit (max 20, default 20).
+ */
+router.get('/table', requireAuth, async (req, res, next) => {
+  try {
+    const page = Math.max(0, Number.parseInt(String(req.query.page ?? '0'), 10) || 0)
+    const limit = Math.min(
+      QUIZ_TABLE_LIMIT_MAX,
+      Math.max(
+        1,
+        Number.parseInt(String(req.query.limit ?? String(QUIZ_TABLE_LIMIT_MAX)), 10) ||
+          QUIZ_TABLE_LIMIT_MAX,
+      ),
+    )
+    const offset = page * limit
+
+    const dbUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { role: true, professionalRole: true },
+    })
+    const isAdmin =
+      dbUser &&
+      (String(dbUser.role || '').toLowerCase() === 'admin' ||
+        String(dbUser.professionalRole || '').toLowerCase() === 'admin')
+
+    const take = limit + 1
+    let combined
+    if (isAdmin) {
+      // All import rows first (pending = not yet generated at top among imports), then all AI rows — each group by newest first.
+      combined = await prisma.$queryRaw`
+        SELECT id, kind, "createdAt" FROM (
+          SELECT b.id, 'import'::text AS kind, b."createdAt",
+            CASE
+              WHEN EXISTS (
+                SELECT 1 FROM "AiQuizCollection" c
+                WHERE c."batchId" = b.id
+                AND EXISTS (
+                  SELECT 1 FROM "AiQuizQuestion" q WHERE q."collectionId" = c.id
+                )
+              ) THEN 0
+              ELSE 1
+            END AS gen_pending
+          FROM "QuizImportBatch" b
+          UNION ALL
+          SELECT c.id, 'ai'::text AS kind, c."createdAt", 0::int AS gen_pending
+          FROM "AiQuizCollection" c
+        ) sub
+        ORDER BY
+          CASE WHEN sub.kind = 'import' THEN 1 ELSE 0 END DESC,
+          sub.gen_pending DESC,
+          sub."createdAt" DESC,
+          sub.id DESC
+        LIMIT ${take}
+        OFFSET ${offset}
+      `
+    } else {
+      combined = await prisma.$queryRaw`
+        SELECT id, kind, "createdAt" FROM (
+          SELECT c.id, 'ai'::text AS kind, c."createdAt"
+          FROM "AiQuizCollection" c
+        ) sub
+        ORDER BY "createdAt" DESC, id DESC
+        LIMIT ${take}
+        OFFSET ${offset}
+      `
+    }
+
+    const hasMore = combined.length > limit
+    const slice = hasMore ? combined.slice(0, limit) : combined
+
+    const importIds = slice.filter((r) => r.kind === 'import').map((r) => r.id)
+    const aiIds = slice.filter((r) => r.kind === 'ai').map((r) => r.id)
+
+    const [batches, collections, totalImportCount] = await Promise.all([
+      importIds.length
+        ? prisma.quizImportBatch.findMany({
+            where: { id: { in: importIds } },
+            include: {
+              files: { orderBy: { id: 'asc' } },
+              aiQuizCollections: {
+                select: { _count: { select: { questions: true } } },
+              },
+            },
+          })
+        : Promise.resolve([]),
+      aiIds.length
+        ? prisma.aiQuizCollection.findMany({
+            where: { id: { in: aiIds } },
+            include: {
+              _count: { select: { questions: true } },
+              batch: {
+                select: {
+                  files: {
+                    orderBy: { id: 'asc' },
+                    select: { id: true, originalName: true },
+                  },
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+      isAdmin ? prisma.quizImportBatch.count() : Promise.resolve(0),
+    ])
+
+    const batchById = Object.fromEntries(batches.map((b) => [b.id, b]))
+    const collectionById = Object.fromEntries(collections.map((c) => [c.id, c]))
+
+    let perfectCollectionIds = new Set()
+    if (aiIds.length > 0) {
+      const prow = await prisma.$queryRaw`
+        SELECT DISTINCT s."collectionId" AS cid
+        FROM "AiQuizSubmission" s
+        WHERE s."userId" = ${req.user.id}
+          AND s."collectionId" IN (${Prisma.join(aiIds)})
+          AND s."totalQuestions" > 0
+          AND s.score = s."totalQuestions"
+      `
+      perfectCollectionIds = new Set(prow.map((r) => r.cid))
+    }
+
+    const rows = slice
+      .map((r) => {
+        if (r.kind === 'import') {
+          const b = batchById[r.id]
+          if (!b) return null
+          const hasGeneratedQuiz = (b.aiQuizCollections || []).some(
+            (c) => (c._count?.questions ?? 0) > 0,
+          )
+          return {
+            kind: 'import',
+            batchId: b.id,
+            createdAt: b.createdAt,
+            courseCode: b.courseCode,
+            courseNote: b.courseNote,
+            files: b.files,
+            hasGeneratedQuiz,
+          }
+        }
+        const c = collectionById[r.id]
+        if (!c) return null
+        return {
+          kind: 'ai',
+          collectionId: c.id,
+          createdAt: c.createdAt,
+          title: c.title,
+          courseCode: c.courseCode,
+          courseNote: c.courseNote,
+          batchId: c.batchId,
+          model: c.model,
+          questionCount: c._count.questions,
+          sourceFiles: c.batch?.files ?? [],
+          userHasPerfectScore: perfectCollectionIds.has(c.id),
+        }
+      })
+      .filter(Boolean)
+
+    res.set('Cache-Control', 'private, no-store')
+    return res.json({
+      rows,
+      page,
+      limit,
+      hasMore,
+      totalImportCount,
+    })
+  } catch (err) {
+    return next(err)
+  }
+})
+
 /**
  * GET /api/quiz/ai-collections
  * AI-generated quiz collections (MCQs from Gemini). Any authenticated user.
@@ -286,22 +461,20 @@ router.get('/ai-collections', requireAuth, async (req, res, next) => {
     })
 
     const collectionIds = collections.map((c) => c.id)
-    const perfectCollectionIds = new Set()
+    let perfectCollectionIds = new Set()
     if (collectionIds.length > 0) {
-      const subs = await prisma.aiQuizSubmission.findMany({
-        where: {
-          userId: req.user.id,
-          collectionId: { in: collectionIds },
-        },
-        select: { collectionId: true, score: true, totalQuestions: true },
-      })
-      for (const s of subs) {
-        if (s.totalQuestions > 0 && s.score === s.totalQuestions) {
-          perfectCollectionIds.add(s.collectionId)
-        }
-      }
+      const rows = await prisma.$queryRaw`
+        SELECT DISTINCT s."collectionId" AS cid
+        FROM "AiQuizSubmission" s
+        WHERE s."userId" = ${req.user.id}
+          AND s."collectionId" IN (${Prisma.join(collectionIds)})
+          AND s."totalQuestions" > 0
+          AND s.score = s."totalQuestions"
+      `
+      perfectCollectionIds = new Set(rows.map((r) => r.cid))
     }
 
+    res.set('Cache-Control', 'private, no-store')
     return res.json({
       collections: collections.map((c) => ({
         id: c.id,

@@ -19,6 +19,40 @@ const normalizeUserType = (value) => {
   return USER_TYPES.has(v) ? v : null
 }
 
+/** Display name default: email local part (before @). User can change in profile. */
+function defaultFullNameFromEmail(emailLower) {
+  const i = emailLower.indexOf('@')
+  const local = i > 0 ? emailLower.slice(0, i) : emailLower
+  const trimmed = local.trim()
+  return trimmed || 'Learner'
+}
+
+/** Unique handle: lowercase [a-z0-9_], min length 3; disambiguate with random suffix if taken. */
+function usernameBaseFromEmailLocal(local) {
+  const lower = String(local || '').trim().toLowerCase()
+  const cleaned = lower.replace(/[^a-z0-9_]/g, '')
+  let base = cleaned || 'user'
+  if (base.length < 3) base = `${base}usr`.slice(0, 3)
+  return base.slice(0, 30)
+}
+
+async function allocateUniqueUsername(prismaClient, emailLower) {
+  const local = defaultFullNameFromEmail(emailLower)
+  const base = usernameBaseFromEmailLocal(local)
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const suffix =
+      attempt === 0 ? '' : `_${crypto.randomBytes(2).toString('hex')}`
+    const room = Math.max(1, 30 - suffix.length)
+    const candidate = `${base.slice(0, room)}${suffix}`.slice(0, 30)
+    const taken = await prismaClient.user.findUnique({
+      where: { username: candidate },
+      select: { id: true },
+    })
+    if (!taken) return candidate
+  }
+  throw new Error('Could not assign username')
+}
+
 async function syncUserTypeToSupabaseAuth(supabaseUserId, userType) {
   const supabaseUrl = process.env.SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -94,13 +128,18 @@ router.post('/register', async (req, res, next) => {
       return res.status(409).json({ error: 'Email already registered' })
     }
 
+    const emailLower = email.toLowerCase()
     const passwordHash = await bcrypt.hash(password, 10)
+    const defaultName = defaultFullNameFromEmail(emailLower)
+    const username = await allocateUniqueUsername(prisma, emailLower)
     const user = await prisma.user.create({
       data: {
-        email: email.toLowerCase(),
+        email: emailLower,
         passwordHash,
         role: 'learner',
         professionalRole: 'student',
+        fullName: defaultName,
+        username,
       },
     })
 
@@ -186,6 +225,8 @@ router.post('/supabase', async (req, res, next) => {
     if (!user) {
       const randomSecret = crypto.randomBytes(32).toString('hex')
       const passwordHash = await bcrypt.hash(randomSecret, 10)
+      const defaultName = defaultFullNameFromEmail(email)
+      const username = await allocateUniqueUsername(prisma, email)
       user = await prisma.user.create({
         data: {
           email,
@@ -193,6 +234,8 @@ router.post('/supabase', async (req, res, next) => {
           role: 'learner',
           professionalRole: 'student',
           supabaseAuthId: supabaseUserId,
+          fullName: defaultName,
+          username,
         },
       })
     } else if (supabaseUserId) {
