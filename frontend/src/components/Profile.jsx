@@ -206,6 +206,16 @@ function Profile() {
         .profile-avatar-tier-ring {
           animation: profile-tier-breathe 4s ease-in-out infinite;
         }
+        @keyframes profile-name-shimmer {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 100% 50%; }
+        }
+        .profile-display-name-tier {
+          -webkit-text-fill-color: transparent;
+        }
+        .profile-display-name-tier--legend {
+          animation: profile-name-shimmer 5.5s ease-in-out infinite alternate;
+        }
       `}</style>
       <section className="relative w-full glass-deep border-b border-slate-800/50 pt-10 pb-20">
         <div className="relative max-w-6xl mx-auto w-full px-6 md:px-12 lg:px-16 flex flex-col md:flex-row items-center md:items-start gap-8 z-10">
@@ -253,7 +263,23 @@ function Profile() {
             <div className="mb-1 flex w-full flex-wrap items-center justify-center gap-3 md:justify-between md:gap-4">
               <div className="flex min-w-0 flex-wrap items-center justify-center gap-3 md:justify-start">
                 <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-x-2.5 gap-y-2 md:justify-start">
-                  <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                  <h1
+                    className={`profile-display-name-tier min-w-0 max-w-full break-words text-3xl font-bold tracking-tight md:text-4xl ${
+                      displayLevel >= MAX_ACCOUNT_LEVEL
+                        ? 'profile-display-name-tier--legend'
+                        : ''
+                    }`}
+                    style={{
+                      backgroundImage: tier.displayNameGradient,
+                      backgroundSize:
+                        displayLevel >= MAX_ACCOUNT_LEVEL ? '220% auto' : '100% 100%',
+                      backgroundRepeat: 'no-repeat',
+                      WebkitBackgroundClip: 'text',
+                      backgroundClip: 'text',
+                      color: 'transparent',
+                      filter: tier.displayNameFilter,
+                    }}
+                  >
                     {user.fullName || user.email?.split('@')[0] || 'User'}
                   </h1>
                 </div>

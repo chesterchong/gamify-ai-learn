@@ -92,9 +92,11 @@ function leaderboardRowBase(u, rank, stats) {
 }
 
 function attachViewer(rows, viewerUserId) {
+  const viewer = viewerUserId == null ? '' : String(viewerUserId)
   return rows.map((r) => ({
     ...r,
-    isCurrentUser: r.userId === viewerUserId,
+    userId: String(r.userId),
+    isCurrentUser: String(r.userId) === viewer,
   }))
 }
 
@@ -136,7 +138,7 @@ async function computeLeaderboardRowsBase(tab) {
 
   if (!rows.length) return []
 
-  const orderedUserIds = rows.map((r) => r.userId)
+  const orderedUserIds = rows.map((r) => String(r.userId))
   const users = await prisma.user.findMany({
     where: { id: { in: orderedUserIds } },
     select: {
@@ -148,7 +150,7 @@ async function computeLeaderboardRowsBase(tab) {
       professionalRole: true,
     },
   })
-  const byId = Object.fromEntries(users.map((u) => [u.id, u]))
+  const byId = Object.fromEntries(users.map((u) => [String(u.id), u]))
   const stats = statsMapFromAccuracyRows(rows)
 
   return orderedUserIds

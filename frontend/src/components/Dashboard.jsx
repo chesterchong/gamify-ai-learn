@@ -3,35 +3,80 @@ import { Link } from 'react-router-dom'
 import PerfectScoreBadge from './PerfectScoreBadge.jsx'
 import TermsThemeStyles from './TermsThemeStyles.jsx'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
+import {
+  MAX_ACCOUNT_LEVEL,
+  getRankTierStyle,
+  levelFromTotalXp,
+} from '../lib/accountLevel.js'
 
 function formatAccuracy(p) {
   if (p == null || Number.isNaN(p)) return '—'
   return `${p % 1 === 0 ? String(Math.round(p)) : p.toFixed(1)}%`
 }
 
-function LeaderboardAvatar({ photoUrl, isCurrentUser }) {
+function LeaderboardAvatar({ photoUrl, isCurrentUser, xp = 0 }) {
   const [failed, setFailed] = useState(false)
   const showImg = Boolean(photoUrl && !failed)
+  const rowLevel = levelFromTotalXp(xp)
+  const tier = getRankTierStyle(rowLevel)
   return (
     <div
-      className={`relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-800 ring-2 ${
-        isCurrentUser ? 'ring-primary/55' : 'ring-slate-600/55'
-      }`}
+      className="dash-lb-avatar-tier relative h-9 w-9 shrink-0 rounded-full p-[2px]"
+      style={{
+        background: tier.ringGradient,
+        boxShadow: tier.outerGlow,
+      }}
     >
-      {showImg ? (
-        <img
-          src={photoUrl}
-          alt=""
-          className="h-full w-full object-cover"
-          onError={() => setFailed(true)}
-          loading="lazy"
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center" aria-hidden>
-          <span className="material-symbols-outlined text-[18px] text-slate-500">person</span>
-        </div>
-      )}
+      <div
+        className={`relative h-full w-full overflow-hidden rounded-full bg-slate-800 ${
+          isCurrentUser ? 'ring-2 ring-primary/45' : 'ring-1 ring-black/35'
+        }`}
+      >
+        {showImg ? (
+          <img
+            src={photoUrl}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={() => setFailed(true)}
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center" aria-hidden>
+            <span className="material-symbols-outlined text-[18px] text-slate-500">person</span>
+          </div>
+        )}
+      </div>
     </div>
+  )
+}
+
+/** Tier gradient + glow on display name (matches profile hero). */
+function LeaderboardDisplayName({ xp, displayName, isCurrentUser }) {
+  const rowLevel = levelFromTotalXp(xp)
+  const tier = getRankTierStyle(rowLevel)
+  const isLegend = rowLevel >= MAX_ACCOUNT_LEVEL
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      <span
+        className={`dash-lb-display-name-tier min-w-0 truncate text-sm font-semibold ${
+          isLegend ? 'dash-lb-display-name-tier--legend' : ''
+        }`}
+        style={{
+          backgroundImage: tier.displayNameGradient,
+          backgroundSize: isLegend ? '220% auto' : '100% 100%',
+          backgroundRepeat: 'no-repeat',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          color: 'transparent',
+          filter: tier.displayNameFilter,
+        }}
+      >
+        {displayName}
+      </span>
+      {isCurrentUser && (
+        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-primary">You</span>
+      )}
+    </span>
   )
 }
 
@@ -310,6 +355,23 @@ function Dashboard() {
           0%, 100% { filter: brightness(1); transform: scale(1); }
           50% { filter: brightness(1.12); transform: scale(1.04); }
         }
+        @keyframes dash-lb-tier-breathe {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.96; transform: scale(1.02); }
+        }
+        .dash-lb-avatar-tier {
+          animation: dash-lb-tier-breathe 4s ease-in-out infinite;
+        }
+        @keyframes dash-lb-name-shimmer {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 100% 50%; }
+        }
+        .dash-lb-display-name-tier {
+          -webkit-text-fill-color: transparent;
+        }
+        .dash-lb-display-name-tier--legend {
+          animation: dash-lb-name-shimmer 5.5s ease-in-out infinite alternate;
+        }
         @media (prefers-reduced-motion: reduce) {
           .dash-glow-line,
           .dash-ambient--a,
@@ -323,6 +385,19 @@ function Dashboard() {
           .dash-section-title,
           .dash-medal {
             animation: none !important;
+          }
+          .dash-lb-avatar-tier,
+          .dash-lb-display-name-tier--legend {
+            animation: none !important;
+          }
+          .dash-lb-display-name-tier {
+            -webkit-text-fill-color: unset !important;
+            background: none !important;
+            background-image: none !important;
+            -webkit-background-clip: unset !important;
+            background-clip: unset !important;
+            color: rgb(248, 250, 252) !important;
+            filter: none !important;
           }
           .dash-section-title {
             background: none;
@@ -518,7 +593,7 @@ function Dashboard() {
                         key={row.userId}
                         className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 transition-colors ${
                           row.isCurrentUser
-                            ? 'bg-primary/10 border-l-2 border-l-primary'
+                            ? 'bg-primary/10 shadow-[inset_4px_0_0_0_#137fec]'
                             : 'hover:bg-slate-800/30'
                         } ${
                           row.rank === 1
@@ -536,6 +611,7 @@ function Dashboard() {
                         <LeaderboardAvatar
                           photoUrl={row.profilePhotoUrl}
                           isCurrentUser={row.isCurrentUser}
+                          xp={Number(row.xp) || 0}
                         />
                         <div className="min-w-0 flex-1">
                           <p className="flex min-w-0 items-center gap-1.5">
@@ -554,14 +630,11 @@ function Dashboard() {
                                 </span>
                               </span>
                             )}
-                            <span className="min-w-0 truncate text-sm font-semibold text-white">
-                              {row.displayName}
-                              {row.isCurrentUser && (
-                                <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-primary">
-                                  You
-                                </span>
-                              )}
-                            </span>
+                            <LeaderboardDisplayName
+                              xp={Number(row.xp) || 0}
+                              displayName={row.displayName}
+                              isCurrentUser={row.isCurrentUser}
+                            />
                           </p>
                         </div>
                         {leaderboardTab === 'xp' && (

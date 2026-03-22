@@ -13,7 +13,8 @@
     "seed": "node prisma/seed.js",
     "update-dsa-lock": "node prisma/update-dsa-lock.js",
     "clear-quiz-imports": "node scripts/clear-quiz-imports.mjs",
-    "reset-db-except-user": "node scripts/reset-all-but-one-user.mjs"
+    "reset-db-except-user": "node scripts/reset-all-but-one-user.mjs",
+    "set-user-max-level": "node scripts/set-user-max-level.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

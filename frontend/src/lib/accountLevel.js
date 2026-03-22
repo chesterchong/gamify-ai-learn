@@ -72,6 +72,9 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(148, 163, 184, 0.55)',
       lvlBg: 'linear-gradient(135deg, #334155, #64748b)',
       lvlText: '#0f172a',
+      displayNameGradient:
+        'linear-gradient(105deg, #94a3b8 0%, #cbd5e1 45%, #f8fafc 100%)',
+      displayNameFilter: 'drop-shadow(0 0 12px rgba(148, 163, 184, 0.45))',
     },
     {
       key: 'silver_elite',
@@ -82,6 +85,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(56, 189, 248, 0.45)',
       lvlBg: 'linear-gradient(135deg, #0e7490, #38bdf8)',
       lvlText: '#0c1220',
+      displayNameGradient:
+        'linear-gradient(105deg, #38bdf8 0%, #7dd3fc 50%, #e0f2fe 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 12px rgba(56, 189, 248, 0.4)) drop-shadow(0 0 22px rgba(125, 211, 252, 0.2))',
     },
     {
       key: 'gold_nova',
@@ -92,6 +99,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(251, 191, 36, 0.55)',
       lvlBg: 'linear-gradient(135deg, #b45309, #fbbf24)',
       lvlText: '#1c1004',
+      displayNameGradient:
+        'linear-gradient(105deg, #fbbf24 0%, #fcd34d 35%, #fef3c7 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 12px rgba(251, 191, 36, 0.5)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.25))',
     },
     {
       key: 'master_guardian',
@@ -102,6 +113,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(190, 242, 100, 0.5)',
       lvlBg: 'linear-gradient(135deg, #3f6212, #a3e635)',
       lvlText: '#0f172a',
+      displayNameGradient:
+        'linear-gradient(105deg, #84cc16 0%, #bef264 45%, #ecfccb 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 12px rgba(163, 230, 53, 0.45)) drop-shadow(0 0 22px rgba(132, 204, 22, 0.2))',
     },
     {
       key: 'dmg',
@@ -112,6 +127,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(34, 211, 238, 0.5)',
       lvlBg: 'linear-gradient(135deg, #0e7490, #22d3ee)',
       lvlText: '#042f2e',
+      displayNameGradient:
+        'linear-gradient(105deg, #06b6d4 0%, #22d3ee 40%, #a5f3fc 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 14px rgba(34, 211, 238, 0.5)) drop-shadow(0 0 26px rgba(6, 182, 212, 0.25))',
     },
     {
       key: 'legendary',
@@ -122,6 +141,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(96, 165, 250, 0.55)',
       lvlBg: 'linear-gradient(135deg, #1d4ed8, #60a5fa)',
       lvlText: '#0c1220',
+      displayNameGradient:
+        'linear-gradient(105deg, #3b82f6 0%, #60a5fa 45%, #bfdbfe 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 14px rgba(96, 165, 250, 0.55)) drop-shadow(0 0 28px rgba(37, 99, 235, 0.3))',
     },
     {
       key: 'supreme',
@@ -132,6 +155,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(192, 132, 252, 0.55)',
       lvlBg: 'linear-gradient(135deg, #7c3aed, #c084fc)',
       lvlText: '#0f172a',
+      displayNameGradient:
+        'linear-gradient(105deg, #a855f7 0%, #c084fc 40%, #e9d5ff 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 14px rgba(192, 132, 252, 0.5)) drop-shadow(0 0 30px rgba(147, 51, 234, 0.3))',
     },
     {
       key: 'elite',
@@ -142,6 +169,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(232, 121, 249, 0.55)',
       lvlBg: 'linear-gradient(135deg, #a21caf, #e879f9)',
       lvlText: '#0c1220',
+      displayNameGradient:
+        'linear-gradient(105deg, #d946ef 0%, #e879f9 45%, #fae8ff 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 14px rgba(232, 121, 249, 0.55)) drop-shadow(0 0 32px rgba(192, 38, 211, 0.28))',
     },
     {
       key: 'challenger',
@@ -152,6 +183,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(251, 146, 60, 0.6)',
       lvlBg: 'linear-gradient(135deg, #ea580c, #fb923c)',
       lvlText: '#1c1004',
+      displayNameGradient:
+        'linear-gradient(105deg, #fb923c 0%, #fdba74 40%, #ffedd5 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 16px rgba(251, 146, 60, 0.55)) drop-shadow(0 0 34px rgba(249, 115, 22, 0.3))',
     },
     {
       key: 'world_elite',
@@ -163,6 +198,10 @@ export function getRankTierStyle(level) {
       pulseGlow: 'rgba(251, 191, 36, 0.65)',
       lvlBg: 'linear-gradient(135deg, #b91c1c, #f59e0b, #fde047)',
       lvlText: '#1c1004',
+      displayNameGradient:
+        'linear-gradient(105deg, #fbbf24 0%, #fde047 25%, #f87171 55%, #fbbf24 80%, #fef08a 100%)',
+      displayNameFilter:
+        'drop-shadow(0 0 16px rgba(251, 191, 36, 0.55)) drop-shadow(0 0 36px rgba(239, 68, 68, 0.35)) drop-shadow(0 0 52px rgba(250, 204, 21, 0.15))',
     },
   ]
   return tiers[L - 1]
