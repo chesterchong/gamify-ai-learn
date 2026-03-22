@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { clearMeCache, writeMeCache } from '../lib/authMeCache.js'
+import { fetchMe } from '../lib/fetchMe.js'
 import supabase from '../lib/supabase'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
@@ -20,10 +21,9 @@ function TopNav() {
     let isMounted = true
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/auth/me`, { credentials: 'include' })
+        const { ok, data } = await fetchMe(apiBaseUrl)
         if (!isMounted) return
-        if (response.ok) {
-          const data = await response.json().catch(() => ({}))
+        if (ok) {
           if (data.user) writeMeCache(data.user)
           setStatus('authenticated')
         } else {

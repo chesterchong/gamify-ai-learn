@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
+import { fetchMe } from '../lib/fetchMe.js'
 import {
   MAX_ACCOUNT_LEVEL,
   getLevelProgressFromXp,
@@ -10,35 +11,121 @@ import {
   xpStepForLevelUp,
 } from '../lib/accountLevel.js'
 
+function formatAvgScorePercent(p) {
+  if (p == null || Number.isNaN(Number(p))) return '—'
+  const n = Number(p)
+  return `${n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1)}%`
+}
+
+function activityCellTitle(dayLabel, count) {
+  if (!dayLabel) return 'Activity unavailable'
+  if (count <= 0) return `${dayLabel} · no AI quiz submissions`
+  return `${dayLabel} · ${count} AI quiz submission${count === 1 ? '' : 's'}`
+}
+
+/** Heatmap uses inline colors so cells render without Tailwind CDN JIT missing dynamic `bg-primary/30`. */
+const PROFILE_ACTIVITY_HEAT_BG = {
+  0: 'rgb(51, 65, 85)',
+  1: 'rgba(19, 127, 236, 0.35)',
+  2: 'rgba(19, 127, 236, 0.65)',
+  3: 'rgb(19, 127, 236)',
+}
+
+const HEAT_CELL_PX = 10
+const HEAT_GAP_PX = 3
+
+const HEATMAP_MONTH_ABBR = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
+
+/** Matches backend grid: column = week starting Sunday, rows Sun→Sat (UTC). */
+const HEATMAP_WEEKDAY_ROWS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function firstDayLabelInHeatmapColumn(cells, weekIndex) {
+  for (let r = 0; r < 7; r++) {
+    const d = cells[weekIndex * 7 + r]?.dayLabel
+    if (d) return d
+  }
+  return ''
+}
+
+/** Month ticks: first letter only, every 2nd month starting January (Jan, Mar, May, …). */
+function buildHeatmapMonthTicks(cells, weekCount) {
+  const ticks = []
+  let prevMonth = -1
+  for (let w = 0; w < weekCount; w++) {
+    const dl = firstDayLabelInHeatmapColumn(cells, w)
+    if (!dl || dl.length < 7) continue
+    const m = parseInt(dl.slice(5, 7), 10)
+    if (Number.isNaN(m) || m < 1 || m > 12) continue
+    if (m === prevMonth) continue
+    prevMonth = m
+    if ((m - 1) % 2 !== 0) continue
+    ticks.push({
+      weekIndex: w,
+      label: HEATMAP_MONTH_ABBR[m - 1].charAt(0),
+    })
+  }
+  return ticks
+}
+
+/** 1-based index along x-axis; oldest week = 1 (GitHub-style left→right time). */
+function buildHeatmapWeekIndexTicks(weekCount, step) {
+  const ticks = []
+  for (let w = 0; w < weekCount; w += step) {
+    ticks.push({ weekIndex: w, label: String(w + 1) })
+  }
+  const last = weekCount - 1
+  if (weekCount > 0 && (ticks.length === 0 || ticks[ticks.length - 1].weekIndex !== last)) {
+    if (!ticks.some((t) => t.weekIndex === last)) {
+      ticks.push({ weekIndex: last, label: String(weekCount) })
+    }
+  }
+  return ticks
+}
+
 function Profile() {
   const location = useLocation()
   const [copyFeedback, setCopyFeedback] = useState('idle')
   const copyResetTimeoutRef = useRef(null)
+  const meFetchGenRef = useRef(0)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [courseStats, setCourseStats] = useState({ completed: 0, total: 0 })
+  const [learningActivity, setLearningActivity] = useState(null)
   const apiBaseUrl = getApiBaseUrl()
 
   const loadUser = useCallback(
     async (opts = { silent: false }) => {
+      const gen = ++meFetchGenRef.current
       if (!opts.silent) setLoading(true)
       try {
-        const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
-          credentials: 'include',
-          cache: 'no-store',
-        })
+        const { ok, data } = await fetchMe(apiBaseUrl)
 
-        if (!response.ok) {
+        if (!ok) {
           throw new Error('Failed to fetch user data')
         }
-
-        const data = await response.json()
+        if (gen !== meFetchGenRef.current) return
         setUser(data.user)
+        setLearningActivity(data.learningActivity ?? null)
         setError('')
       } catch (err) {
+        if (gen !== meFetchGenRef.current) return
         setError(err.message || 'Failed to load profile data')
       } finally {
+        if (gen !== meFetchGenRef.current) return
         if (!opts.silent) setLoading(false)
       }
     },
@@ -144,14 +231,47 @@ function Profile() {
   const modulesDone = courseStats.completed
   const totalModules = courseStats.total || modulesDone || 0
 
-  // Learning activity heatmap: 7 rows (e.g. days) × 52 columns (weeks). Each cell = 0–3 (intensity).
-  // Replace with real contribution data from API when ready.
-  const HEATMAP_ROWS = 7
-  const HEATMAP_COLS = 52
-  const activityHeatmap = Array.from(
-    { length: HEATMAP_ROWS * HEATMAP_COLS },
-    (_, i) => (i * 11 + 7) % 4
-  )
+  const heatmapLevels = Array.isArray(learningActivity?.levels)
+    ? learningActivity.levels
+    : null
+  const heatmapCounts = Array.isArray(learningActivity?.counts)
+    ? learningActivity.counts
+    : null
+  const heatmapDayLabels = Array.isArray(learningActivity?.dayLabels)
+    ? learningActivity.dayLabels
+    : null
+  const heatmapWeeks =
+    heatmapLevels &&
+    heatmapLevels.length > 0 &&
+    heatmapLevels.length % 7 === 0
+      ? heatmapLevels.length / 7
+      : Math.max(1, Number(learningActivity?.weekCount) || 52)
+  const heatmapCellCount = heatmapWeeks * 7
+  const heatmapCells =
+    heatmapLevels && heatmapLevels.length === heatmapCellCount
+      ? heatmapLevels.map((level, i) => ({
+          level: Math.min(3, Math.max(0, Math.round(Number(level)) || 0)),
+          count: Math.max(0, Math.round(Number(heatmapCounts?.[i]) || 0)),
+          dayLabel: heatmapDayLabels?.[i] ?? '',
+        }))
+      : Array.from({ length: heatmapCellCount }, () => ({
+          level: 0,
+          count: 0,
+          dayLabel: '',
+        }))
+  const activityHeatmapYear = learningActivity?.calendarYear ?? 2026
+  const activityTotalInYear =
+    learningActivity?.totalSubmissionsInYear ??
+    learningActivity?.totalSubmissions365 ??
+    0
+  const activityLongestStreak = learningActivity?.longestStreakDays ?? 0
+
+  const heatmapMonthTicks = buildHeatmapMonthTicks(heatmapCells, heatmapWeeks)
+  const heatmapWeekIndexTicks = buildHeatmapWeekIndexTicks(heatmapWeeks, 4)
+  const monthTickByWeek = new Map(heatmapMonthTicks.map((t) => [t.weekIndex, t.label]))
+  const weekTickByWeek = new Map(heatmapWeekIndexTicks.map((t) => [t.weekIndex, t.label]))
+
+  const heatmapRowTemplate = `${HEAT_CELL_PX}px repeat(7, ${HEAT_CELL_PX}px) ${HEAT_CELL_PX}px`
 
   if (loading) {
     return (
@@ -448,43 +568,43 @@ function Profile() {
       </section>
       <div className="max-w-6xl mx-auto w-full px-6 md:px-12 lg:px-16 -mt-12 mb-6 pb-4 relative z-10 flex flex-col gap-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Current Streak */}
-          <div className="relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-6 transition-all duration-200 hover:border-orange-500/40 hover:shadow-[0_0_24px_-4px_rgba(249,115,22,0.15)]">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-500 to-amber-600" />
+          <div className="relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-6 transition-all duration-200 hover:border-amber-500/40 hover:shadow-[0_0_24px_-4px_rgba(245,158,11,0.15)]">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-500 to-orange-600" />
             <div className="flex items-start justify-between gap-3 pl-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                  Current Streak
+                  Avg score
                 </p>
                 <p className="text-3xl font-bold tabular-nums text-white">
-                  {user.streakCount || 0}
-                  <span className="ml-1 text-lg font-medium text-slate-400">
-                    {user.streakCount === 1 ? 'day' : 'days'}
-                  </span>
+                  {formatAvgScorePercent(user.avgScorePercent)}
+                </p>
+                <p className="text-xs text-slate-500 mt-1.5">
+                  {Number(user.aiQuizAttempts) > 0
+                    ? `Across ${user.aiQuizAttempts} AI quiz ${user.aiQuizAttempts === 1 ? 'attempt' : 'attempts'}`
+                    : 'No AI quiz attempts yet'}
                 </p>
               </div>
-              <div className="rounded-lg bg-orange-500/10 p-2.5 text-orange-400">
+              <div className="rounded-lg bg-amber-500/10 p-2.5 text-amber-400">
                 <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  local_fire_department
+                  percent
                 </span>
               </div>
             </div>
           </div>
-          {/* Class Rank */}
-          <div className="relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-6 transition-all duration-200 hover:border-violet-500/40 hover:shadow-[0_0_24px_-4px_rgba(139,92,246,0.15)]">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-purple-600" />
+          <div className="relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-6 transition-all duration-200 hover:border-sky-500/40 hover:shadow-[0_0_24px_-4px_rgba(14,165,233,0.15)]">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-sky-500 to-blue-600" />
             <div className="flex items-start justify-between gap-3 pl-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                  Class Rank
+                  Lessons completed
                 </p>
-                <p className="text-3xl font-bold text-white">
-                  Top 5<span className="text-xl font-semibold text-slate-400">%</span>
+                <p className="text-3xl font-bold tabular-nums text-white">
+                  {Math.max(0, Math.floor(Number(user.lessonsCompleted ?? 0)))}
                 </p>
               </div>
-              <div className="rounded-lg bg-violet-500/10 p-2.5 text-violet-400">
-                <span className="material-symbols-outlined text-2xl">
-                  leaderboard
+              <div className="rounded-lg bg-sky-500/10 p-2.5 text-sky-400">
+                <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  menu_book
                 </span>
               </div>
             </div>
@@ -514,35 +634,114 @@ function Profile() {
         </div>
         <div className="rounded-xl glass-card border border-slate-700/50 p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <h2 className="text-lg font-bold text-white">
-              Learning Activity
-            </h2>
+            <h2 className="text-lg font-bold text-white">Learning Activity</h2>
             <div className="flex items-center gap-2 text-xs text-slate-500">
               <span>Less</span>
               <div className="flex gap-0.5">
-                <div className="size-3 rounded-sm bg-slate-700" title="0" />
-                <div className="size-3 rounded-sm bg-primary/30" title="1" />
-                <div className="size-3 rounded-sm bg-primary/60" title="2" />
-                <div className="size-3 rounded-sm bg-primary" title="3+" />
+                <div
+                  className="size-3 rounded-sm"
+                  style={{ backgroundColor: PROFILE_ACTIVITY_HEAT_BG[0] }}
+                  title="No submissions"
+                />
+                <div
+                  className="size-3 rounded-sm"
+                  style={{ backgroundColor: PROFILE_ACTIVITY_HEAT_BG[1] }}
+                  title="Lower volume"
+                />
+                <div
+                  className="size-3 rounded-sm"
+                  style={{ backgroundColor: PROFILE_ACTIVITY_HEAT_BG[2] }}
+                  title="Medium"
+                />
+                <div
+                  className="size-3 rounded-sm"
+                  style={{ backgroundColor: PROFILE_ACTIVITY_HEAT_BG[3] }}
+                  title="Higher volume"
+                />
               </div>
               <span>More</span>
             </div>
           </div>
-          <div className="w-full overflow-x-auto">
-            <div className="inline-grid gap-[3px] min-w-0" style={{ gridTemplateColumns: 'repeat(52, 10px)', gridAutoRows: '10px' }}>
-              {activityHeatmap.map((level, i) => (
+          <div className="w-full overflow-x-auto pb-1">
+            <div className="inline-block min-w-0">
+              <div className="flex items-start gap-1">
                 <div
-                  key={i}
-                  className={`size-[10px] rounded-[2px] ${level === 0 ? 'bg-slate-700' : level === 1 ? 'bg-primary/30' : level === 2 ? 'bg-primary/60' : 'bg-primary'}`}
-                  title={level > 0 ? `${level} contribution(s)` : 'No activity'}
+                  className="grid shrink-0 w-9 pr-1 text-[10px] text-slate-500 text-right tabular-nums leading-none"
+                  style={{
+                    gridTemplateRows: heatmapRowTemplate,
+                    rowGap: HEAT_GAP_PX,
+                  }}
                   aria-hidden
-                />
-              ))}
+                >
+                  <div />
+                  {HEATMAP_WEEKDAY_ROWS.map((d) => (
+                    <div key={d} className="flex min-h-0 items-center justify-end">
+                      {d}
+                    </div>
+                  ))}
+                  <div />
+                </div>
+                <div
+                  className="grid min-w-0"
+                  style={{
+                    gridTemplateColumns: `repeat(${heatmapWeeks}, ${HEAT_CELL_PX}px)`,
+                    columnGap: HEAT_GAP_PX,
+                    rowGap: HEAT_GAP_PX,
+                    gridTemplateRows: heatmapRowTemplate,
+                  }}
+                  role="img"
+                  aria-label={`AI quiz activity heatmap for ${activityHeatmapYear}: ${activityTotalInYear} submissions; longest daily streak in this year ${activityLongestStreak} days.`}
+                >
+                  {Array.from({ length: heatmapWeeks }, (_, w) => (
+                    <div
+                      key={`mh-${w}`}
+                      className="flex min-h-0 min-w-0 items-center justify-center text-[10px] leading-none text-slate-500"
+                      style={{ gridRow: 1, gridColumn: w + 1 }}
+                    >
+                      {monthTickByWeek.get(w) ?? ''}
+                    </div>
+                  ))}
+                  {heatmapCells.map((cell, i) => {
+                    const w = Math.floor(i / 7)
+                    const r = i % 7
+                    return (
+                      <div
+                        key={i}
+                        className="min-h-0 min-w-0 rounded-[2px]"
+                        style={{
+                          gridRow: r + 2,
+                          gridColumn: w + 1,
+                          backgroundColor:
+                            PROFILE_ACTIVITY_HEAT_BG[cell.level] ??
+                            PROFILE_ACTIVITY_HEAT_BG[0],
+                        }}
+                        title={activityCellTitle(cell.dayLabel, cell.count)}
+                        aria-hidden
+                      />
+                    )
+                  })}
+                  {Array.from({ length: heatmapWeeks }, (_, w) => (
+                    <div
+                      key={`wk-${w}`}
+                      className="flex min-h-0 min-w-0 items-center justify-center text-[10px] leading-none text-slate-500 tabular-nums"
+                      style={{ gridRow: 9, gridColumn: w + 1 }}
+                    >
+                      {weekTickByWeek.get(w) ?? ''}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap justify-between gap-2 mt-3 pt-3 border-t border-slate-700/80 text-xs text-slate-500">
-            <span>Total: 452 contributions this year</span>
-            <span>Longest streak: 12 days</span>
+            <span>
+              {activityTotalInYear.toLocaleString()} submission
+              {activityTotalInYear === 1 ? '' : 's'} in {activityHeatmapYear} (UTC)
+            </span>
+            <span>
+              Longest streak: {activityLongestStreak.toLocaleString()} day
+              {activityLongestStreak === 1 ? '' : 's'}
+            </span>
           </div>
         </div>
       </div>

@@ -7,6 +7,10 @@ import { createClient } from '@supabase/supabase-js'
 import prisma from '../db/prisma.js'
 import requireAuth from '../middleware/requireAuth.js'
 import { levelFromTotalXp } from '../lib/accountLevel.js'
+import {
+  buildLearningActivityForCalendarYear,
+  LEARNING_ACTIVITY_HEATMAP_YEAR,
+} from '../lib/learningActivityGrid.js'
 
 const router = Router()
 const PASSWORD_MIN_LENGTH = 8
@@ -114,6 +118,19 @@ const toSafeUser = (user) => ({
   profilePhotoUrl: user.profilePhotoUrl,
   aiQuizSubmissionCount: user.aiQuizSubmissionCount ?? 0,
 })
+
+/** Mean score/totalQuestions per AI quiz attempt; matches dashboard summary accuracy. */
+function avgScorePercentFromSubmissions(submissions) {
+  if (!submissions?.length) return { avgScorePercent: null, aiQuizAttempts: 0 }
+  const sumRatio = submissions.reduce((acc, s) => {
+    const t = Math.max(1, s.totalQuestions)
+    return acc + s.score / t
+  }, 0)
+  return {
+    avgScorePercent: Math.round((sumRatio / submissions.length) * 1000) / 10,
+    aiQuizAttempts: submissions.length,
+  }
+}
 
 router.post('/register', async (req, res, next) => {
   try {
@@ -284,16 +301,55 @@ router.post('/supabase', async (req, res, next) => {
 
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-    })
+    const userId = req.user.id
+    const [user, lessonsCompleted, aiQuizSubs] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+      }),
+      prisma.userLessonProgress.count({
+        where: { userId, isCompleted: true },
+      }),
+      prisma.aiQuizSubmission.findMany({
+        where: { userId },
+        select: { score: true, totalQuestions: true, createdAt: true },
+      }),
+    ])
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
+    const { avgScorePercent, aiQuizAttempts } =
+      avgScorePercentFromSubmissions(aiQuizSubs)
+
+    const learningActivity = buildLearningActivityForCalendarYear(
+      aiQuizSubs,
+      LEARNING_ACTIVITY_HEATMAP_YEAR,
+    )
+    const laLevels = learningActivity.levels
+    const weekCountFromGrid =
+      Array.isArray(laLevels) && laLevels.length > 0 && laLevels.length % 7 === 0
+        ? laLevels.length / 7
+        : learningActivity.weekCount
+
     res.set('Cache-Control', 'private, no-store')
-    return res.json({ user: toSafeUser(user) })
+    return res.json({
+      user: {
+        ...toSafeUser(user),
+        lessonsCompleted,
+        avgScorePercent,
+        aiQuizAttempts,
+      },
+      learningActivity: {
+        calendarYear: learningActivity.calendarYear,
+        weekCount: weekCountFromGrid,
+        levels: learningActivity.levels,
+        counts: learningActivity.counts,
+        dayLabels: learningActivity.dayLabels,
+        totalSubmissionsInYear: learningActivity.totalSubmissionsInYear,
+        longestStreakDays: learningActivity.longestStreakDays,
+      },
+    })
   } catch (error) {
     return next(error)
   }

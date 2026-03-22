@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
+import { fetchMe } from '../lib/fetchMe.js'
 
 function ProtectedRoute({ children }) {
   const [status, setStatus] = useState('loading')
@@ -11,11 +12,9 @@ function ProtectedRoute({ children }) {
 
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
-          credentials: 'include',
-        })
+        const { ok } = await fetchMe(apiBaseUrl)
 
-        if (!response.ok) {
+        if (!ok) {
           if (isMounted) {
             setStatus('unauthenticated')
           }
