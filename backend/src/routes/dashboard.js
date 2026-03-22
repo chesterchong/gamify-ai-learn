@@ -82,6 +82,7 @@ function leaderboardRowBase(u, rank, stats) {
   return {
     rank,
     userId: u.id,
+    username: u.username?.trim() || null,
     displayName: displayLabel(u),
     profilePhotoUrl: u.profilePhotoUrl?.trim() || null,
     xp: typeof u.xp === 'number' ? u.xp : 0,

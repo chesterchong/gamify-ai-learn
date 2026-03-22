@@ -51,28 +51,41 @@ function LeaderboardAvatar({ photoUrl, isCurrentUser, xp = 0 }) {
 }
 
 /** Tier gradient + glow on display name (matches profile hero). */
-function LeaderboardDisplayName({ xp, displayName, isCurrentUser }) {
+function LeaderboardDisplayName({ xp, displayName, isCurrentUser, profileUsername }) {
   const rowLevel = levelFromTotalXp(xp)
   const tier = getRankTierStyle(rowLevel)
   const isLegend = rowLevel >= MAX_ACCOUNT_LEVEL
+  const nameEl = (
+    <span
+      className={`dash-lb-display-name-tier min-w-0 truncate text-sm font-semibold ${
+        isLegend ? 'dash-lb-display-name-tier--legend' : ''
+      }`}
+      style={{
+        backgroundImage: tier.displayNameGradient,
+        backgroundSize: isLegend ? '220% auto' : '100% 100%',
+        backgroundRepeat: 'no-repeat',
+        WebkitBackgroundClip: 'text',
+        backgroundClip: 'text',
+        color: 'transparent',
+        filter: tier.displayNameFilter,
+      }}
+    >
+      {displayName}
+    </span>
+  )
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2">
-      <span
-        className={`dash-lb-display-name-tier min-w-0 truncate text-sm font-semibold ${
-          isLegend ? 'dash-lb-display-name-tier--legend' : ''
-        }`}
-        style={{
-          backgroundImage: tier.displayNameGradient,
-          backgroundSize: isLegend ? '220% auto' : '100% 100%',
-          backgroundRepeat: 'no-repeat',
-          WebkitBackgroundClip: 'text',
-          backgroundClip: 'text',
-          color: 'transparent',
-          filter: tier.displayNameFilter,
-        }}
-      >
-        {displayName}
-      </span>
+      {profileUsername ? (
+        <Link
+          to={`/profile/${encodeURIComponent(profileUsername)}`}
+          className="inline-flex min-w-0 max-w-full shrink rounded-sm outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-primary/60"
+          title={`View ${displayName}'s profile`}
+        >
+          {nameEl}
+        </Link>
+      ) : (
+        <span className="inline-flex min-w-0 max-w-full shrink">{nameEl}</span>
+      )}
       {isCurrentUser && (
         <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-primary">You</span>
       )}
@@ -634,6 +647,7 @@ function Dashboard() {
                               xp={Number(row.xp) || 0}
                               displayName={row.displayName}
                               isCurrentUser={row.isCurrentUser}
+                              profileUsername={row.username}
                             />
                           </p>
                         </div>

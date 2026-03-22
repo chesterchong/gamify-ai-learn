@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { gsap } from 'gsap'
 import supabase from '../lib/supabase'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
@@ -236,9 +236,9 @@ function Signup() {
   useEffect(() => {
     if (!authSuccess) return
     // Short delay so user sees success state, then redirect (was 1800ms)
-    const t = setTimeout(() => navigate('/dash'), 400)
+    const t = setTimeout(() => navigate(redirectAfterAuth, { replace: true }), 400)
     return () => clearTimeout(t)
-  }, [authSuccess, navigate])
+  }, [authSuccess, navigate, redirectAfterAuth])
 
   const handleGitHubLogin = async () => {
     setError('')
@@ -306,7 +306,7 @@ function Signup() {
       }
 
       await response.json()
-      navigate('/dash')
+      navigate(redirectAfterAuth, { replace: true })
     } catch (err) {
       const msg = err.message || 'Something went wrong'
       const isNetwork =

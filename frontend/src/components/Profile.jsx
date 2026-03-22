@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
-import { fetchMe } from '../lib/fetchMe.js'
 import {
   MAX_ACCOUNT_LEVEL,
   getLevelProgressFromXp,
@@ -97,6 +96,7 @@ function buildHeatmapWeekIndexTicks(weekCount, step) {
 
 function Profile() {
   const location = useLocation()
+  const { username: profileUsernameParam = '' } = useParams()
   const [copyFeedback, setCopyFeedback] = useState('idle')
   const copyResetTimeoutRef = useRef(null)
   const meFetchGenRef = useRef(0)
@@ -105,21 +105,49 @@ function Profile() {
   const [error, setError] = useState('')
   const [courseStats, setCourseStats] = useState({ completed: 0, total: 0 })
   const [learningActivity, setLearningActivity] = useState(null)
+  const [viewerIsSubject, setViewerIsSubject] = useState(() => !profileUsernameParam)
   const apiBaseUrl = getApiBaseUrl()
+
+  useEffect(() => {
+    setViewerIsSubject(!profileUsernameParam)
+  }, [profileUsernameParam])
 
   const loadUser = useCallback(
     async (opts = { silent: false }) => {
       const gen = ++meFetchGenRef.current
       if (!opts.silent) setLoading(true)
       try {
-        const { ok, data } = await fetchMe(apiBaseUrl)
-
-        if (!ok) {
-          throw new Error('Failed to fetch user data')
+        let data
+        if (profileUsernameParam) {
+          const u = encodeURIComponent(profileUsernameParam.trim())
+          const res = await fetch(`${apiBaseUrl}/api/auth/profile/${u}`, {
+            credentials: 'include',
+          })
+          const body = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            throw new Error(body.error || 'Failed to load profile')
+          }
+          data = body
+        } else {
+          const me = await fetchMe(apiBaseUrl)
+          if (!me.ok) {
+            throw new Error('Failed to fetch user data')
+          }
+          data = me.data
         }
+
         if (gen !== meFetchGenRef.current) return
         setUser(data.user)
         setLearningActivity(data.learningActivity ?? null)
+        setCourseStats(
+          data.courseStats && typeof data.courseStats === 'object'
+            ? {
+                completed: Number(data.courseStats.completed) || 0,
+                total: Number(data.courseStats.total) || 0,
+              }
+            : { completed: 0, total: 0 },
+        )
+        setViewerIsSubject(data.viewerIsSubject !== false)
         setError('')
       } catch (err) {
         if (gen !== meFetchGenRef.current) return
@@ -129,14 +157,17 @@ function Profile() {
         if (!opts.silent) setLoading(false)
       }
     },
-    [apiBaseUrl],
+    [apiBaseUrl, profileUsernameParam],
   )
 
   useEffect(() => {
     loadUser({ silent: false })
   }, [loadUser, location.pathname, location.key])
 
+  const viewingOtherByUrl = !viewerIsSubject
+
   useEffect(() => {
+    if (viewingOtherByUrl) return undefined
     const onFocus = () => loadUser({ silent: true })
     const onVis = () => {
       if (document.visibilityState === 'visible') loadUser({ silent: true })
@@ -150,27 +181,7 @@ function Profile() {
       document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('gamify-xp-updated', onXp)
     }
-  }, [loadUser])
-
-  // Fetch course progress to power "Modules Done" card
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await fetch(`${apiBaseUrl}/api/learning/courses`, {
-          credentials: 'include',
-        })
-        if (!response.ok) return
-        const data = await response.json()
-        const total = data.length || 0
-        const completed = data.filter((c) => c.status === 'completed').length
-        setCourseStats({ completed, total })
-      } catch {
-        // Silently ignore; keep defaults if learning data is unavailable
-      }
-    }
-
-    fetchCourses()
-  }, [apiBaseUrl])
+  }, [loadUser, viewingOtherByUrl])
 
   useEffect(
     () => () => {
@@ -181,8 +192,24 @@ function Profile() {
     [],
   )
 
+  const profileSharePath =
+    user?.username && String(user.username).trim()
+      ? `/profile/${encodeURIComponent(String(user.username).trim())}`
+      : null
+
   const copyProfileLink = useCallback(() => {
-    const url = `${window.location.origin}/profile`
+    if (!profileSharePath) {
+      setCopyFeedback('error')
+      if (copyResetTimeoutRef.current != null) {
+        window.clearTimeout(copyResetTimeoutRef.current)
+      }
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        setCopyFeedback('idle')
+        copyResetTimeoutRef.current = null
+      }, 2000)
+      return
+    }
+    const url = `${window.location.origin}${profileSharePath}`
     const write = async () => {
       try {
         await navigator.clipboard.writeText(url)
@@ -215,7 +242,7 @@ function Profile() {
         copyResetTimeoutRef.current = null
       }, 2000)
     })()
-  }, [])
+  }, [profileSharePath])
 
   const currentXP = Math.max(0, Math.floor(Number(user?.xp ?? 0)))
   const lvProg = getLevelProgressFromXp(currentXP)
@@ -349,7 +376,7 @@ function Profile() {
             >
               {user.profilePhotoUrl ? (
                 <img
-                  alt={`Profile picture of ${user.fullName || user.email}`}
+                  alt={`Profile picture of ${user.fullName || user.email || user.username || 'User'}`}
                   className="h-full w-full rounded-full object-cover ring-2 ring-black/40"
                   src={user.profilePhotoUrl}
                   onError={(e) => {
@@ -400,7 +427,10 @@ function Profile() {
                       filter: tier.displayNameFilter,
                     }}
                   >
-                    {user.fullName || user.email?.split('@')[0] || 'User'}
+                    {user.fullName ||
+                      user.email?.split('@')[0] ||
+                      user.username ||
+                      'User'}
                   </h1>
                 </div>
                 {user.username && (
@@ -426,49 +456,53 @@ function Profile() {
                   </span>
                 )}
               </div>
-              <div
-                className="flex shrink-0 items-center gap-1.5"
-                role="group"
-                aria-label="Profile actions"
-              >
-                <Link
-                  to="/profile/edit"
-                  title="Edit profile"
-                  aria-label="Edit profile"
-                  className="inline-flex size-10 items-center justify-center rounded-xl border border-[rgba(64,64,64,0.8)] bg-[rgba(20,24,28,0.6)] text-[rgba(100,255,255,0.4)] shadow-[0_0_12px_rgba(0,255,255,0.06)] backdrop-blur-sm transition-[color,border-color,box-shadow,opacity] duration-200 hover:border-[rgba(100,255,255,0.22)] hover:text-[rgba(100,255,255,0.7)] hover:shadow-[0_0_10px_rgba(0,255,255,0.12)] active:border-[rgba(0,255,255,0.35)] active:text-[#00FFFF] active:shadow-[0_0_8px_#00FFFF,0_0_12px_rgba(0,255,255,0.35)] active:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#00FFFF]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c121c]"
+              {viewerIsSubject && (
+                <div
+                  className="flex shrink-0 items-center gap-1.5"
+                  role="group"
+                  aria-label="Profile actions"
                 >
-                  <span className="material-symbols-outlined text-[22px]" aria-hidden>
-                    edit
-                  </span>
-                </Link>
-                <button
-                  type="button"
-                  title="Copy profile link"
-                  aria-label={
-                    copyFeedback === 'copied'
-                      ? 'Profile link copied'
-                      : copyFeedback === 'error'
-                        ? 'Could not copy link'
-                        : 'Copy profile link'
-                  }
-                  onClick={copyProfileLink}
-                  className={`inline-flex size-10 items-center justify-center rounded-xl border backdrop-blur-sm transition-[color,border-color,box-shadow,opacity] duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c121c] ${
-                    copyFeedback === 'copied'
-                      ? 'border-emerald-500/35 bg-[rgba(20,24,28,0.6)] text-emerald-400/90 shadow-[0_0_12px_rgba(16,185,129,0.12)] hover:border-emerald-400/50 hover:text-emerald-300 focus-visible:ring-emerald-400/40'
-                      : copyFeedback === 'error'
-                        ? 'border-red-500/35 bg-[rgba(20,24,28,0.6)] text-red-400/90 shadow-[0_0_12px_rgba(248,113,113,0.1)] hover:border-red-400/50 hover:text-red-300 focus-visible:ring-red-400/40'
-                        : 'border-[rgba(64,64,64,0.8)] bg-[rgba(20,24,28,0.6)] text-[rgba(100,255,255,0.4)] shadow-[0_0_12px_rgba(0,255,255,0.06)] hover:border-[rgba(100,255,255,0.22)] hover:text-[rgba(100,255,255,0.7)] hover:shadow-[0_0_10px_rgba(0,255,255,0.12)] active:border-[rgba(0,255,255,0.35)] active:text-[#00FFFF] active:shadow-[0_0_8px_#00FFFF,0_0_12px_rgba(0,255,255,0.35)] active:opacity-100 focus-visible:ring-[#00FFFF]/45'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[22px]" aria-hidden>
-                    {copyFeedback === 'copied'
-                      ? 'check'
-                      : copyFeedback === 'error'
-                        ? 'error'
-                        : 'content_copy'}
-                  </span>
-                </button>
-              </div>
+                  <Link
+                    to="/profile/edit"
+                    title="Edit profile"
+                    aria-label="Edit profile"
+                    className="inline-flex size-10 items-center justify-center rounded-xl border border-[rgba(64,64,64,0.8)] bg-[rgba(20,24,28,0.6)] text-[rgba(100,255,255,0.4)] shadow-[0_0_12px_rgba(0,255,255,0.06)] backdrop-blur-sm transition-[color,border-color,box-shadow,opacity] duration-200 hover:border-[rgba(100,255,255,0.22)] hover:text-[rgba(100,255,255,0.7)] hover:shadow-[0_0_10px_rgba(0,255,255,0.12)] active:border-[rgba(0,255,255,0.35)] active:text-[#00FFFF] active:shadow-[0_0_8px_#00FFFF,0_0_12px_rgba(0,255,255,0.35)] active:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#00FFFF]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c121c]"
+                  >
+                    <span className="material-symbols-outlined text-[22px]" aria-hidden>
+                      edit
+                    </span>
+                  </Link>
+                  {profileSharePath && (
+                    <button
+                      type="button"
+                      title="Copy profile link"
+                      aria-label={
+                        copyFeedback === 'copied'
+                          ? 'Profile link copied'
+                          : copyFeedback === 'error'
+                            ? 'Could not copy link'
+                            : 'Copy profile link'
+                      }
+                      onClick={copyProfileLink}
+                      className={`inline-flex size-10 items-center justify-center rounded-xl border backdrop-blur-sm transition-[color,border-color,box-shadow,opacity] duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c121c] ${
+                        copyFeedback === 'copied'
+                          ? 'border-emerald-500/35 bg-[rgba(20,24,28,0.6)] text-emerald-400/90 shadow-[0_0_12px_rgba(16,185,129,0.12)] hover:border-emerald-400/50 hover:text-emerald-300 focus-visible:ring-emerald-400/40'
+                          : copyFeedback === 'error'
+                            ? 'border-red-500/35 bg-[rgba(20,24,28,0.6)] text-red-400/90 shadow-[0_0_12px_rgba(248,113,113,0.1)] hover:border-red-400/50 hover:text-red-300 focus-visible:ring-red-400/40'
+                            : 'border-[rgba(64,64,64,0.8)] bg-[rgba(20,24,28,0.6)] text-[rgba(100,255,255,0.4)] shadow-[0_0_12px_rgba(0,255,255,0.06)] hover:border-[rgba(100,255,255,0.22)] hover:text-[rgba(100,255,255,0.7)] hover:shadow-[0_0_10px_rgba(0,255,255,0.12)] active:border-[rgba(0,255,255,0.35)] active:text-[#00FFFF] active:shadow-[0_0_8px_#00FFFF,0_0_12px_rgba(0,255,255,0.35)] active:opacity-100 focus-visible:ring-[#00FFFF]/45'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[22px]" aria-hidden>
+                        {copyFeedback === 'copied'
+                          ? 'check'
+                          : copyFeedback === 'error'
+                            ? 'error'
+                            : 'content_copy'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <span className="sr-only" aria-live="polite">
               {copyFeedback === 'copied'

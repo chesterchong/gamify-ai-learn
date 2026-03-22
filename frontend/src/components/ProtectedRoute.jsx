@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 import { fetchMe } from '../lib/fetchMe.js'
 
 function ProtectedRoute({ children }) {
   const [status, setStatus] = useState('loading')
+  const location = useLocation()
   const apiBaseUrl = getApiBaseUrl()
 
   useEffect(() => {
@@ -43,7 +44,7 @@ function ProtectedRoute({ children }) {
   }
 
   if (status === 'unauthenticated') {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace state={{ from: location }} />
   }
 
   return children

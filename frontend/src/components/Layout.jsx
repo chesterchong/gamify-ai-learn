@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import supabase from '../lib/supabase'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
 
@@ -55,7 +55,15 @@ function Layout({ title, children, mainClassName = '' }) {
                 </span>
                 <span className="text-sm font-medium">Quiz</span>
               </NavLink>
-              <NavLink className={navLinkClass} to="/profile">
+              <NavLink
+                className={(args) =>
+                  navLinkClass({
+                    isActive:
+                      profileSectionActive(location.pathname) || args.isActive,
+                  })
+                }
+                to="/profile"
+              >
                 <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">
                   person
                 </span>

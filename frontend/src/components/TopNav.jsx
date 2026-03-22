@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { clearMeCache, writeMeCache } from '../lib/authMeCache.js'
 import { fetchMe } from '../lib/fetchMe.js'
 import supabase from '../lib/supabase'
@@ -12,8 +12,15 @@ const NAV_ITEMS = [
   { to: '/profile', label: 'PROFILE' },
 ]
 
+function profileSectionActive(pathname) {
+  if (pathname === '/profile') return true
+  if (!pathname.startsWith('/profile/')) return false
+  return !pathname.startsWith('/profile/edit')
+}
+
 function TopNav() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [status, setStatus] = useState('loading')
   const apiBaseUrl = getApiBaseUrl()
 
@@ -125,11 +132,15 @@ function TopNav() {
                   key={to}
                   to={to}
                   end={to === '/dash'}
-                  className={({ isActive: navActive }) =>
-                    `topnav-link relative px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium tracking-wider uppercase transition-colors duration-200 ${
-                      navActive ? 'active' : 'hover:text-[rgba(100,255,255,0.7)]'
+                  className={({ isActive: navActive }) => {
+                    const active =
+                      to === '/profile'
+                        ? profileSectionActive(location.pathname)
+                        : navActive
+                    return `topnav-link relative px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium tracking-wider uppercase transition-colors duration-200 ${
+                      active ? 'active' : 'hover:text-[rgba(100,255,255,0.7)]'
                     }`
-                  }
+                  }}
                 >
                   {label}
                   <span

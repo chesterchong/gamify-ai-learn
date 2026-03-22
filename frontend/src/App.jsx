@@ -7,6 +7,7 @@ import EditProfile from './components/EditProfile.jsx'
 import Home from './components/Home.jsx'
 import Learn from './components/Learn.jsx'
 import Profile from './components/Profile.jsx'
+import ProfileRedirect from './components/ProfileRedirect.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Quiz from './components/Quiz.jsx'
 import QuizAiCollection from './components/QuizAiCollection.jsx'
@@ -82,7 +83,15 @@ function App() {
           }
         />
         <Route
-          path="/profile"
+          path="/profile/edit"
+          element={
+            <ProtectedRoute>
+              <EditProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile/:username"
           element={
             <ProtectedRoute>
               <Profile />
@@ -90,10 +99,10 @@ function App() {
           }
         />
         <Route
-          path="/profile/edit"
+          path="/profile"
           element={
             <ProtectedRoute>
-              <EditProfile />
+              <ProfileRedirect />
             </ProtectedRoute>
           }
         />

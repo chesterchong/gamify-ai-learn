@@ -238,7 +238,8 @@ function EditProfile() {
 
       // Redirect after a short delay
       setTimeout(() => {
-        navigate('/profile')
+        const u = data.user?.username?.trim()
+        navigate(u ? `/profile/${encodeURIComponent(u)}` : '/profile', { replace: true })
       }, 1500)
     } catch (err) {
       const msg = err.message || 'Failed to save changes'

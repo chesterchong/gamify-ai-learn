@@ -11,6 +11,7 @@ import {
   buildLearningActivityForCalendarYear,
   LEARNING_ACTIVITY_HEATMAP_YEAR,
 } from '../lib/learningActivityGrid.js'
+import { getCourseCompletionSummaryForUser } from '../lib/courseProgressForUser.js'
 
 const router = Router()
 const PASSWORD_MIN_LENGTH = 8
@@ -129,6 +130,62 @@ function avgScorePercentFromSubmissions(submissions) {
   return {
     avgScorePercent: Math.round((sumRatio / submissions.length) * 1000) / 10,
     aiQuizAttempts: submissions.length,
+  }
+}
+
+async function assembleProfileBundle(userId, { includeEmail = false } = {}) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  })
+  if (!user) return null
+
+  const [lessonsCompleted, aiQuizSubs, courseSummary] = await Promise.all([
+    prisma.userLessonProgress.count({
+      where: { userId, isCompleted: true },
+    }),
+    prisma.aiQuizSubmission.findMany({
+      where: { userId },
+      select: { score: true, totalQuestions: true, createdAt: true },
+    }),
+    getCourseCompletionSummaryForUser(userId),
+  ])
+
+  const { avgScorePercent, aiQuizAttempts } =
+    avgScorePercentFromSubmissions(aiQuizSubs)
+
+  const learningActivity = buildLearningActivityForCalendarYear(
+    aiQuizSubs,
+    LEARNING_ACTIVITY_HEATMAP_YEAR,
+  )
+  const laLevels = learningActivity.levels
+  const weekCountFromGrid =
+    Array.isArray(laLevels) && laLevels.length > 0 && laLevels.length % 7 === 0
+      ? laLevels.length / 7
+      : learningActivity.weekCount
+
+  const base = toSafeUser(user)
+  const userOut = {
+    ...base,
+    lessonsCompleted,
+    avgScorePercent,
+    aiQuizAttempts,
+  }
+  if (!includeEmail) {
+    delete userOut.email
+  }
+
+  return {
+    user: userOut,
+    learningActivity: {
+      calendarYear: learningActivity.calendarYear,
+      weekCount: weekCountFromGrid,
+      levels: learningActivity.levels,
+      counts: learningActivity.counts,
+      dayLabels: learningActivity.dayLabels,
+      totalSubmissionsInYear: learningActivity.totalSubmissionsInYear,
+      longestStreakDays: learningActivity.longestStreakDays,
+    },
+    courseStats: courseSummary,
   }
 }
 
@@ -301,54 +358,59 @@ router.post('/supabase', async (req, res, next) => {
 
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
-    const userId = req.user.id
-    const [user, lessonsCompleted, aiQuizSubs] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: userId },
-      }),
-      prisma.userLessonProgress.count({
-        where: { userId, isCompleted: true },
-      }),
-      prisma.aiQuizSubmission.findMany({
-        where: { userId },
-        select: { score: true, totalQuestions: true, createdAt: true },
-      }),
-    ])
-
-    if (!user) {
+    const bundle = await assembleProfileBundle(req.user.id, {
+      includeEmail: true,
+    })
+    if (!bundle) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    const { avgScorePercent, aiQuizAttempts } =
-      avgScorePercentFromSubmissions(aiQuizSubs)
+    res.set('Cache-Control', 'private, no-store')
+    return res.json({
+      user: bundle.user,
+      learningActivity: bundle.learningActivity,
+      courseStats: bundle.courseStats,
+      viewerIsSubject: true,
+    })
+  } catch (error) {
+    return next(error)
+  }
+})
 
-    const learningActivity = buildLearningActivityForCalendarYear(
-      aiQuizSubs,
-      LEARNING_ACTIVITY_HEATMAP_YEAR,
-    )
-    const laLevels = learningActivity.levels
-    const weekCountFromGrid =
-      Array.isArray(laLevels) && laLevels.length > 0 && laLevels.length % 7 === 0
-        ? laLevels.length / 7
-        : learningActivity.weekCount
+/**
+ * View another learner's profile (or your own) by username. Requires login.
+ * Does not expose email.
+ */
+router.get('/profile/:username', requireAuth, async (req, res, next) => {
+  try {
+    const raw = String(req.params.username || '').trim()
+    if (!raw) {
+      return res.status(400).json({ error: 'Username required' })
+    }
+
+    const subject = await prisma.user.findFirst({
+      where: {
+        username: { equals: raw, mode: 'insensitive' },
+      },
+      select: { id: true },
+    })
+    if (!subject) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const bundle = await assembleProfileBundle(subject.id, {
+      includeEmail: false,
+    })
+    if (!bundle) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const viewerIsSubject = String(req.user.id) === String(subject.id)
 
     res.set('Cache-Control', 'private, no-store')
     return res.json({
-      user: {
-        ...toSafeUser(user),
-        lessonsCompleted,
-        avgScorePercent,
-        aiQuizAttempts,
-      },
-      learningActivity: {
-        calendarYear: learningActivity.calendarYear,
-        weekCount: weekCountFromGrid,
-        levels: learningActivity.levels,
-        counts: learningActivity.counts,
-        dayLabels: learningActivity.dayLabels,
-        totalSubmissionsInYear: learningActivity.totalSubmissionsInYear,
-        longestStreakDays: learningActivity.longestStreakDays,
-      },
+      ...bundle,
+      viewerIsSubject,
     })
   } catch (error) {
     return next(error)
