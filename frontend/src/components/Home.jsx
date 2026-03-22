@@ -343,8 +343,6 @@ function Home() {
             <p>© 2026 CSARENA. ALL RIGHTS RESERVED.</p>
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="flex items-center gap-6">
-                <a className="hover:text-primary" href="#">About Us</a>
-                <a className="hover:text-primary" href="#">Career</a>
                 <Link className="hover:text-primary" to="/terms">
                   Terms
                 </Link>
