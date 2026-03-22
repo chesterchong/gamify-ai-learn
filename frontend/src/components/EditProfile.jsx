@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
+import { getRankTierStyle, levelFromTotalXp } from '../lib/accountLevel.js'
 
 function EditProfile() {
   const navigate = useNavigate()
@@ -265,6 +266,9 @@ function EditProfile() {
     )
   }
 
+  const editTier = getRankTierStyle(levelFromTotalXp(user?.xp ?? 0))
+  const editDisplayLevel = levelFromTotalXp(user?.xp ?? 0)
+
   return (
     <div className="min-h-screen w-full bg-[#0b111b] text-white">
       <style>{`
@@ -287,6 +291,13 @@ function EditProfile() {
           -webkit-user-select: none;
           -moz-user-select: none;
           -ms-user-select: none;
+        }
+        @keyframes edit-tier-breathe {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.94; transform: scale(1.015); }
+        }
+        .profile-edit-tier-ring {
+          animation: edit-tier-breathe 4s ease-in-out infinite;
         }
       `}</style>
         <div className="max-w-5xl mx-auto px-6 md:px-10 py-10">
@@ -336,8 +347,14 @@ function EditProfile() {
               <div className="flex flex-col lg:flex-row gap-8">
                 <div className="flex items-center gap-6">
                   <div className="relative">
-                    <div className="size-28 md:size-32 rounded-full border-4 border-[#21426a] bg-gradient-to-br from-[#0b111b] to-[#1b2738] flex items-center justify-center">
-                      <div className="size-24 md:size-28 rounded-full overflow-hidden bg-[#0b111b] flex items-center justify-center">
+                    <div
+                      className="profile-edit-tier-ring size-28 md:size-32 rounded-full p-[3px]"
+                      style={{
+                        background: editTier.ringGradient,
+                        boxShadow: editTier.outerGlow,
+                      }}
+                    >
+                      <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#0b111b] to-[#1b2738]">
                         {formData.profilePhotoUrl ? (
                           <img
                             alt="Profile preview"
@@ -379,8 +396,11 @@ function EditProfile() {
                       )}
                     </button>
                     {user && (
-                      <span className="absolute -bottom-2 right-0 bg-[#f7c338] text-[#0b111b] text-xs font-bold px-3 py-1 rounded-full border border-[#0f1623]">
-                        LVL {user.level}
+                      <span
+                        className="absolute -bottom-2 right-0 rounded-full border border-black/35 px-3 py-1 text-xs font-bold shadow-md"
+                        style={{ background: editTier.lvlBg, color: editTier.lvlText }}
+                      >
+                        LVL {editDisplayLevel}
                       </span>
                     )}
                   </div>

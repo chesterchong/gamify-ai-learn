@@ -6,6 +6,7 @@ import multer from 'multer'
 import { createClient } from '@supabase/supabase-js'
 import prisma from '../db/prisma.js'
 import requireAuth from '../middleware/requireAuth.js'
+import { levelFromTotalXp } from '../lib/accountLevel.js'
 
 const router = Router()
 const PASSWORD_MIN_LENGTH = 8
@@ -102,7 +103,9 @@ const toSafeUser = (user) => ({
   email: user.email,
   role: user.role,
   xp: typeof user.xp === 'number' && Number.isFinite(user.xp) ? user.xp : 0,
-  level: user.level,
+  level: levelFromTotalXp(
+    typeof user.xp === 'number' && Number.isFinite(user.xp) ? user.xp : 0,
+  ),
   streakCount: user.streakCount,
   lastActiveDate: user.lastActiveDate,
   fullName: user.fullName,

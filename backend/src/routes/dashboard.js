@@ -6,6 +6,7 @@ import {
   leaderboardCacheGet,
   leaderboardCacheSet,
 } from '../lib/leaderboardCache.js'
+import { levelFromTotalXp } from '../lib/accountLevel.js'
 
 const router = Router()
 
@@ -86,6 +87,7 @@ function leaderboardRowBase(u, rank, stats) {
     xp: typeof u.xp === 'number' ? u.xp : 0,
     quizSubmissions: s.quizSubmissions,
     accuracyPercent: s.accuracyPercent,
+    isAdmin: String(u.professionalRole || '').toLowerCase() === 'admin',
   }
 }
 
@@ -108,6 +110,7 @@ async function computeLeaderboardRowsBase(tab) {
         fullName: true,
         xp: true,
         profilePhotoUrl: true,
+        professionalRole: true,
       },
     })
     const ids = leaders.map((u) => u.id)
@@ -142,6 +145,7 @@ async function computeLeaderboardRowsBase(tab) {
       fullName: true,
       xp: true,
       profilePhotoUrl: true,
+      professionalRole: true,
     },
   })
   const byId = Object.fromEntries(users.map((u) => [u.id, u]))
@@ -207,13 +211,15 @@ async function getDashboardSummaryJson(userId) {
     }
   }
 
+  const xpVal = typeof me?.xp === 'number' ? me.xp : 0
   return {
     quizzesCompleted: submissionCount,
     perfectQuizzesCount: perfectCollectionIds.size,
     lessonsCompleted,
     accuracyPercent,
     streakDays: me?.streakCount ?? 0,
-    xp: typeof me?.xp === 'number' ? me.xp : 0,
+    xp: xpVal,
+    level: levelFromTotalXp(xpVal),
     displayName: displayLabel(me),
   }
 }

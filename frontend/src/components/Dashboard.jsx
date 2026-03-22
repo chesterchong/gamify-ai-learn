@@ -538,13 +538,30 @@ function Dashboard() {
                           isCurrentUser={row.isCurrentUser}
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-white">
-                            {row.displayName}
-                            {row.isCurrentUser && (
-                              <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-primary">
-                                You
+                          <p className="flex min-w-0 items-center gap-1.5">
+                            {row.isAdmin && (
+                              <span
+                                className="inline-flex shrink-0"
+                                title="Administrator"
+                                aria-label="Administrator account"
+                              >
+                                <span
+                                  className="material-symbols-outlined text-[18px] text-violet-300/95"
+                                  style={{ fontVariationSettings: "'FILL' 1" }}
+                                  aria-hidden
+                                >
+                                  admin_panel_settings
+                                </span>
                               </span>
                             )}
+                            <span className="min-w-0 truncate text-sm font-semibold text-white">
+                              {row.displayName}
+                              {row.isCurrentUser && (
+                                <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-primary">
+                                  You
+                                </span>
+                              )}
+                            </span>
                           </p>
                         </div>
                         {leaderboardTab === 'xp' && (

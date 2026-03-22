@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { levelFromTotalXp } from '../lib/accountLevel.js'
 import multer from 'multer'
 import { Prisma } from '@prisma/client'
 import { createClient } from '@supabase/supabase-js'
@@ -674,7 +675,7 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
     const isPerfectScore = totalQuestions > 0 && score === totalQuestions
     const perfectScoreXpAwarded = isPerfectScore ? PERFECT_SCORE_XP : 0
 
-    const { lifetimeAiQuizSubmissions, xp, xpAwarded } = await prisma.$transaction(
+    const { lifetimeAiQuizSubmissions, xp, xpAwarded, level: newLevel } = await prisma.$transaction(
       async (tx) => {
         await tx.aiQuizSubmission.create({
           data: {
@@ -703,10 +704,16 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
           },
           select: { aiQuizSubmissionCount: true, xp: true },
         })
+        const nextLevel = levelFromTotalXp(u.xp)
+        await tx.user.update({
+          where: { id: req.user.id },
+          data: { level: nextLevel },
+        })
         return {
           lifetimeAiQuizSubmissions: u.aiQuizSubmissionCount,
           xp: u.xp,
           xpAwarded: perfectScoreXpAwarded,
+          level: nextLevel,
         }
       },
     )
@@ -718,6 +725,7 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
       lifetimeAiQuizSubmissions,
       xp,
       xpAwarded,
+      level: newLevel,
       results: detailAnswers.map((d) => ({
         questionId: d.questionId,
         isCorrect: d.isCorrect,

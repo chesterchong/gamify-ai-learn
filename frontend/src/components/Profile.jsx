@@ -1,14 +1,19 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import ProfileShareModal from './ProfileShareModal.jsx'
 import TermsThemeStyles from './TermsThemeStyles'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
-
-const XP_MILESTONE = 500
+import {
+  MAX_ACCOUNT_LEVEL,
+  getLevelProgressFromXp,
+  getRankTierStyle,
+  levelFromTotalXp,
+  xpStepForLevelUp,
+} from '../lib/accountLevel.js'
 
 function Profile() {
   const location = useLocation()
-  const [isShareOpen, setIsShareOpen] = useState(false)
+  const [copyFeedback, setCopyFeedback] = useState('idle')
+  const copyResetTimeoutRef = useRef(null)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -80,18 +85,61 @@ function Profile() {
     fetchCourses()
   }, [apiBaseUrl])
 
-  // Generate profile share link from username or email
-  const profileShareLink = user?.username 
-    ? `sample.com/u/${user.username}` 
-    : user?.email 
-    ? `sample.com/u/${user.email.split('@')[0]}` 
-    : 'sample.com/u/user'
+  useEffect(
+    () => () => {
+      if (copyResetTimeoutRef.current != null) {
+        window.clearTimeout(copyResetTimeoutRef.current)
+      }
+    },
+    [],
+  )
 
-  const currentXP = Number(user?.xp ?? 0)
-  const nextMilestone =
-    currentXP <= 0 ? XP_MILESTONE : Math.ceil((currentXP + 1) / XP_MILESTONE) * XP_MILESTONE
-  const xpProgress = Math.min(100, (currentXP / nextMilestone) * 100)
-  const xpToNextMilestone = Math.max(0, nextMilestone - currentXP)
+  const copyProfileLink = useCallback(() => {
+    const url = `${window.location.origin}/profile`
+    const write = async () => {
+      try {
+        await navigator.clipboard.writeText(url)
+        return true
+      } catch {
+        try {
+          const ta = document.createElement('textarea')
+          ta.value = url
+          ta.setAttribute('readonly', '')
+          ta.style.position = 'fixed'
+          ta.style.left = '-9999px'
+          document.body.appendChild(ta)
+          ta.select()
+          const ok = document.execCommand('copy')
+          document.body.removeChild(ta)
+          return ok
+        } catch {
+          return false
+        }
+      }
+    }
+    void (async () => {
+      const ok = await write()
+      setCopyFeedback(ok ? 'copied' : 'error')
+      if (copyResetTimeoutRef.current != null) {
+        window.clearTimeout(copyResetTimeoutRef.current)
+      }
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        setCopyFeedback('idle')
+        copyResetTimeoutRef.current = null
+      }, 2000)
+    })()
+  }, [])
+
+  const currentXP = Math.max(0, Math.floor(Number(user?.xp ?? 0)))
+  const lvProg = getLevelProgressFromXp(currentXP)
+  const displayLevel = levelFromTotalXp(currentXP)
+  const tier = getRankTierStyle(displayLevel)
+  const xpProgressPct = lvProg.progressToNext * 100
+  const xpRemainingInBracket =
+    lvProg.xpToNextLevel != null
+      ? Math.max(0, lvProg.xpToNextLevel - lvProg.xpIntoLevel)
+      : 0
+  const nextStepXp = lvProg.xpToNextLevel
 
   const modulesDone = courseStats.completed
   const totalModules = courseStats.total || modulesDone || 0
@@ -151,15 +199,28 @@ function Profile() {
         ::-webkit-scrollbar-thumb:hover {
           background: #4b5563;
         }
+        @keyframes profile-tier-breathe {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.94; transform: scale(1.015); }
+        }
+        .profile-avatar-tier-ring {
+          animation: profile-tier-breathe 4s ease-in-out infinite;
+        }
       `}</style>
       <section className="relative w-full glass-deep border-b border-slate-800/50 pt-10 pb-20">
         <div className="relative max-w-6xl mx-auto w-full px-6 md:px-12 lg:px-16 flex flex-col md:flex-row items-center md:items-start gap-8 z-10">
           <div className="relative group">
-            <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full p-1 bg-[#162235] border-2 border-slate-600/80 ring-2 ring-primary/20">
+            <div
+              className="profile-avatar-tier-ring relative w-32 h-32 md:w-40 md:h-40 rounded-full p-[3px]"
+              style={{
+                background: tier.ringGradient,
+                boxShadow: tier.outerGlow,
+              }}
+            >
               {user.profilePhotoUrl ? (
                 <img
                   alt={`Profile picture of ${user.fullName || user.email}`}
-                  className="w-full h-full rounded-full object-cover border-4 border-primary"
+                  className="h-full w-full rounded-full object-cover ring-2 ring-black/40"
                   src={user.profilePhotoUrl}
                   onError={(e) => {
                     // Hide image and show fallback icon if image fails to load
@@ -171,37 +232,132 @@ function Profile() {
                   }}
                 />
               ) : null}
-              <div className={`w-full h-full rounded-full bg-slate-700 flex items-center justify-center ${user.profilePhotoUrl ? 'hidden profile-photo-fallback' : ''}`}>
+              <div
+                className={`flex h-full w-full items-center justify-center rounded-full bg-slate-800/95 ${
+                  user.profilePhotoUrl ? 'hidden profile-photo-fallback' : ''
+                }`}
+              >
                 <span className="material-symbols-outlined text-4xl md:text-5xl text-slate-400">
                   account_circle
                 </span>
               </div>
             </div>
-            <div className="absolute bottom-0 right-0 bg-primary text-white font-bold text-xs px-2 py-1 rounded-full border border-slate-600">
-              LVL {user.level || 1}
+            <div
+              className="absolute bottom-0 right-0 rounded-full border border-black/30 px-2 py-1 text-xs font-bold shadow-md"
+              style={{ background: tier.lvlBg, color: tier.lvlText }}
+            >
+              LVL {displayLevel}
             </div>
           </div>
-          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
-            <div className="flex flex-col md:flex-row items-center gap-3 mb-1">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
-                {user.fullName || user.email?.split('@')[0] || 'User'}
-              </h1>
-              {user.username && (
-                <span className="bg-slate-700/60 text-slate-200 text-xs font-semibold px-3 py-1 rounded-full border border-slate-600">
-                  @{user.username}
-                </span>
-              )}
+          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full min-w-0">
+            <div className="mb-1 flex w-full flex-wrap items-center justify-center gap-3 md:justify-between md:gap-4">
+              <div className="flex min-w-0 flex-wrap items-center justify-center gap-3 md:justify-start">
+                <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-x-2.5 gap-y-2 md:justify-start">
+                  <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                    {user.fullName || user.email?.split('@')[0] || 'User'}
+                  </h1>
+                </div>
+                {user.username && (
+                  <span className="inline-flex items-center gap-2">
+                    {user.professionalRole === 'admin' && (
+                      <span
+                        className="inline-flex shrink-0 items-center"
+                        title="Administrator account"
+                        aria-label="Administrator account"
+                      >
+                        <span
+                          className="material-symbols-outlined text-[22px] text-violet-300/95 sm:text-[24px]"
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                          aria-hidden
+                        >
+                          admin_panel_settings
+                        </span>
+                      </span>
+                    )}
+                    <span className="inline-flex items-center rounded-full border border-[rgba(64,64,64,0.85)] bg-[rgba(20,24,28,0.55)] px-3.5 py-1 font-mono text-[11px] font-semibold tracking-wide text-[rgba(0,255,255,0.88)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_18px_-6px_rgba(0,255,255,0.22)] backdrop-blur-md sm:text-xs">
+                      {user.username}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <div
+                className="flex shrink-0 items-center gap-1.5"
+                role="group"
+                aria-label="Profile actions"
+              >
+                <Link
+                  to="/profile/edit"
+                  title="Edit profile"
+                  aria-label="Edit profile"
+                  className="inline-flex size-10 items-center justify-center rounded-xl border border-[rgba(64,64,64,0.8)] bg-[rgba(20,24,28,0.6)] text-[rgba(100,255,255,0.4)] shadow-[0_0_12px_rgba(0,255,255,0.06)] backdrop-blur-sm transition-[color,border-color,box-shadow,opacity] duration-200 hover:border-[rgba(100,255,255,0.22)] hover:text-[rgba(100,255,255,0.7)] hover:shadow-[0_0_10px_rgba(0,255,255,0.12)] active:border-[rgba(0,255,255,0.35)] active:text-[#00FFFF] active:shadow-[0_0_8px_#00FFFF,0_0_12px_rgba(0,255,255,0.35)] active:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#00FFFF]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c121c]"
+                >
+                  <span className="material-symbols-outlined text-[22px]" aria-hidden>
+                    edit
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  title="Copy profile link"
+                  aria-label={
+                    copyFeedback === 'copied'
+                      ? 'Profile link copied'
+                      : copyFeedback === 'error'
+                        ? 'Could not copy link'
+                        : 'Copy profile link'
+                  }
+                  onClick={copyProfileLink}
+                  className={`inline-flex size-10 items-center justify-center rounded-xl border backdrop-blur-sm transition-[color,border-color,box-shadow,opacity] duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c121c] ${
+                    copyFeedback === 'copied'
+                      ? 'border-emerald-500/35 bg-[rgba(20,24,28,0.6)] text-emerald-400/90 shadow-[0_0_12px_rgba(16,185,129,0.12)] hover:border-emerald-400/50 hover:text-emerald-300 focus-visible:ring-emerald-400/40'
+                      : copyFeedback === 'error'
+                        ? 'border-red-500/35 bg-[rgba(20,24,28,0.6)] text-red-400/90 shadow-[0_0_12px_rgba(248,113,113,0.1)] hover:border-red-400/50 hover:text-red-300 focus-visible:ring-red-400/40'
+                        : 'border-[rgba(64,64,64,0.8)] bg-[rgba(20,24,28,0.6)] text-[rgba(100,255,255,0.4)] shadow-[0_0_12px_rgba(0,255,255,0.06)] hover:border-[rgba(100,255,255,0.22)] hover:text-[rgba(100,255,255,0.7)] hover:shadow-[0_0_10px_rgba(0,255,255,0.12)] active:border-[rgba(0,255,255,0.35)] active:text-[#00FFFF] active:shadow-[0_0_8px_#00FFFF,0_0_12px_rgba(0,255,255,0.35)] active:opacity-100 focus-visible:ring-[#00FFFF]/45'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[22px]" aria-hidden>
+                    {copyFeedback === 'copied'
+                      ? 'check'
+                      : copyFeedback === 'error'
+                        ? 'error'
+                        : 'content_copy'}
+                  </span>
+                </button>
+              </div>
             </div>
-            {user.professionalRole && (
-              <p className="text-slate-400 text-lg font-medium mb-6">
-                {user.professionalRole === 'admin' ? 'Admin' : 'Student'}
-              </p>
-            )}
+            <span className="sr-only" aria-live="polite">
+              {copyFeedback === 'copied'
+                ? 'Profile link copied to clipboard.'
+                : copyFeedback === 'error'
+                  ? 'Copy failed.'
+                  : ''}
+            </span>
             <div className="w-full max-w-lg mb-6">
-              <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-                <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-400">
-                  Mastery Progress
-                  <span className="relative inline-flex group/xphelp">
+              <div className="flex justify-between items-center gap-2 text-xs text-slate-500 mb-2">
+                <span>
+                  {displayLevel >= MAX_ACCOUNT_LEVEL ? (
+                    <>
+                      Level {displayLevel} ·{' '}
+                      <span className="font-semibold text-slate-300">{tier.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      Level {displayLevel} ·{' '}
+                      <span className="font-semibold text-slate-300">{tier.name}</span>
+                      <span className="text-slate-600"> · </span>
+                      <span className="text-slate-500">next: {displayLevel + 1}</span>
+                    </>
+                  )}
+                </span>
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  {displayLevel >= MAX_ACCOUNT_LEVEL ? (
+                    <span>{currentXP.toLocaleString()} XP</span>
+                  ) : (
+                    <span>
+                      {lvProg.xpIntoLevel.toLocaleString()} /{' '}
+                      {nextStepXp != null ? nextStepXp.toLocaleString() : '—'} XP
+                    </span>
+                  )}
+                  <span className="relative inline-flex shrink-0 group/xphelp">
                     <button
                       type="button"
                       className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-500/55 bg-slate-800/80 px-1 text-[11px] font-bold leading-none text-slate-400 hover:border-primary/45 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-help"
@@ -213,7 +369,7 @@ function Profile() {
                     <span
                       id="profile-xp-rules-tooltip"
                       role="tooltip"
-                      className="pointer-events-none invisible absolute left-0 top-full z-30 mt-2 w-[min(19rem,calc(100vw-2.5rem))] origin-top-left scale-95 opacity-0 transition-[opacity,transform,visibility] duration-150 group-hover/xphelp:visible group-hover/xphelp:scale-100 group-hover/xphelp:opacity-100 group-focus-within/xphelp:visible group-focus-within/xphelp:scale-100 group-focus-within/xphelp:opacity-100 rounded-lg border border-slate-600/90 bg-slate-950/95 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-200 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md sm:left-1/2 sm:-translate-x-1/2"
+                      className="pointer-events-none invisible absolute right-0 top-full z-30 mt-2 w-[min(19rem,calc(100vw-2.5rem))] origin-top-right scale-95 opacity-0 transition-[opacity,transform,visibility] duration-150 group-hover/xphelp:visible group-hover/xphelp:scale-100 group-hover/xphelp:opacity-100 group-focus-within/xphelp:visible group-focus-within/xphelp:scale-100 group-focus-within/xphelp:opacity-100 rounded-lg border border-slate-600/90 bg-slate-950/95 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-200 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md"
                     >
                       <span className="block font-bold text-slate-100 mb-1.5">XP rules</span>
                       <span className="block text-slate-300">
@@ -222,61 +378,44 @@ function Profile() {
                         qualifying attempt counts separately.
                       </span>
                       <span className="block mt-2 text-slate-400 border-t border-slate-700/80 pt-2">
-                        The bar shows progress toward your next{' '}
-                        <span className="text-slate-300 font-medium">{XP_MILESTONE.toLocaleString()} XP</span>{' '}
-                        milestone.
+                        {displayLevel >= MAX_ACCOUNT_LEVEL ? (
+                          <>Max level {MAX_ACCOUNT_LEVEL} reached ({tier.name}).</>
+                        ) : (
+                          <>
+                            Levels 1–{MAX_ACCOUNT_LEVEL}: each step doubles (500, 1k, 2k…). You need{' '}
+                            <span className="text-slate-300 font-medium">
+                              {xpStepForLevelUp(displayLevel).toLocaleString()} XP
+                            </span>{' '}
+                            in this bracket to reach level {displayLevel + 1}. Bar and ring colors match
+                            your tier.
+                          </>
+                        )}
                       </span>
                     </span>
                   </span>
                 </span>
-                <span className="text-lg font-bold tabular-nums text-white">
-                  {currentXP.toLocaleString()}{' '}
-                  <span className="text-sm font-semibold text-slate-400">total XP</span>
-                </span>
               </div>
-              <div className="flex justify-between text-xs text-slate-500 mb-2">
-                <span>
-                  Next milestone: {nextMilestone.toLocaleString()} XP
-                </span>
-                <span className="tabular-nums">
-                  {currentXP.toLocaleString()} / {nextMilestone.toLocaleString()}
-                </span>
-              </div>
-              <div className="h-3 w-full bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-3 w-full rounded-full bg-slate-800/90 ring-1 ring-slate-700/80 overflow-hidden">
                 <div
                   className="progress-bar-fill h-full rounded-full relative overflow-hidden transition-[width] duration-300"
-                  style={{ width: `${xpProgress}%` }}
+                  style={{
+                    width: `${xpProgressPct}%`,
+                    background: tier.barGradient,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2)`,
+                  }}
                 >
-                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                  <div className="absolute inset-0 bg-white/15 animate-pulse" />
                 </div>
               </div>
-              {xpToNextMilestone > 0 && (
+              {displayLevel >= MAX_ACCOUNT_LEVEL ? (
                 <p className="text-xs text-slate-500 mt-2 text-right">
-                  {xpToNextMilestone.toLocaleString()} XP until next milestone
-                  {typeof user.level === 'number' ? ` · Level ${user.level}` : ''}
+                  Max level · {tier.name}
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500 mt-2 text-right">
+                  {xpRemainingInBracket.toLocaleString()} XP until level {displayLevel + 1}
                 </p>
               )}
-            </div>
-            <div className="flex gap-3">
-              <Link
-                className="flex items-center gap-2 px-5 py-2 bg-slate-700/60 text-white rounded-lg font-bold text-sm hover:bg-slate-600/60 transition-colors border border-slate-600"
-                to="/profile/edit"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  edit
-                </span>
-                Edit Profile
-              </Link>
-              <button
-                className="flex items-center gap-2 px-5 py-2 bg-slate-700/60 text-white rounded-lg font-bold text-sm hover:bg-slate-600/60 transition-colors border border-slate-600"
-                onClick={() => setIsShareOpen(true)}
-                type="button"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  share
-                </span>
-                Share Profile
-              </button>
             </div>
           </div>
         </div>
@@ -381,11 +520,6 @@ function Profile() {
           </div>
         </div>
       </div>
-      <ProfileShareModal
-        isOpen={isShareOpen}
-        link={profileShareLink}
-        onClose={() => setIsShareOpen(false)}
-      />
     </div>
   )
 }
