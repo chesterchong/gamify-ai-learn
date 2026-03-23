@@ -549,13 +549,21 @@ function Profile() {
                     <span
                       id="profile-xp-rules-tooltip"
                       role="tooltip"
-                      className="pointer-events-none invisible absolute right-0 top-full z-30 mt-2 w-[min(19rem,calc(100vw-2.5rem))] origin-top-right scale-95 opacity-0 transition-[opacity,transform,visibility] duration-150 group-hover/xphelp:visible group-hover/xphelp:scale-100 group-hover/xphelp:opacity-100 group-focus-within/xphelp:visible group-focus-within/xphelp:scale-100 group-focus-within/xphelp:opacity-100 rounded-lg border border-slate-600/90 bg-slate-950/95 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-200 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md"
+                      className="pointer-events-none invisible absolute right-0 top-full z-30 mt-2 w-[min(22rem,calc(100vw-2.5rem))] origin-top-right scale-95 opacity-0 transition-[opacity,transform,visibility] duration-150 group-hover/xphelp:visible group-hover/xphelp:scale-100 group-hover/xphelp:opacity-100 group-focus-within/xphelp:visible group-focus-within/xphelp:scale-100 group-focus-within/xphelp:opacity-100 rounded-lg border border-slate-600/90 bg-slate-950/95 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-200 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md"
                     >
                       <span className="block font-bold text-slate-100 mb-1.5">XP rules</span>
                       <span className="block text-slate-300">
                         Perfect score on an AI quiz (every question correct) adds{' '}
-                        <span className="font-semibold text-amber-200/95">+100 XP</span>. Each
-                        qualifying attempt counts separately.
+                        <span className="font-semibold text-amber-200/95">+100 XP</span> per attempt.
+                      </span>
+                      <span className="block mt-2 text-slate-300">
+                        <span className="font-semibold text-emerald-200/90">Same-day streak (UTC):</span>{' '}
+                        if you already aced at least one <em className="not-italic text-slate-200">other</em>{' '}
+                        quiz today, your <em className="not-italic text-slate-200">first</em> perfect on
+                        each additional quiz that day also earns{' '}
+                        <span className="font-semibold text-amber-200/95">+20 XP</span> (20% of the 100
+                        perfect bonus). The first perfect of the day has no streak; re-perfecting the
+                        same quiz the same day is +100 only—no extra streak.
                       </span>
                       <span className="block mt-2 text-slate-400 border-t border-slate-700/80 pt-2">
                         {displayLevel >= MAX_ACCOUNT_LEVEL ? (

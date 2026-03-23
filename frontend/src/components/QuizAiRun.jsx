@@ -966,7 +966,24 @@ function QuizAiRun() {
                     <p className="rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200/95">
                       <span className="font-bold text-emerald-400">+{submitPayload.xpAwarded} XP</span>
                       {' — '}
-                      perfect score bonus. Your total is now{' '}
+                      {typeof submitPayload.streakBonusXp === 'number' &&
+                      submitPayload.streakBonusXp > 0 ? (
+                        <>
+                          <span className="tabular-nums text-emerald-100/95">
+                            {typeof submitPayload.perfectScoreXp === 'number'
+                              ? submitPayload.perfectScoreXp
+                              : submitPayload.xpAwarded - submitPayload.streakBonusXp}
+                          </span>
+                          {' perfect score + '}
+                          <span className="tabular-nums text-emerald-100/95">
+                            {submitPayload.streakBonusXp}
+                          </span>
+                          {' same-day streak (+20%). '}
+                        </>
+                      ) : (
+                        <>perfect score bonus. </>
+                      )}
+                      Your total is now{' '}
                       <span className="tabular-nums font-semibold text-white">
                         {typeof submitPayload.xp === 'number'
                           ? submitPayload.xp.toLocaleString()

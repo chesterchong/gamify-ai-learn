@@ -50,6 +50,16 @@ function choiceArrayFromJson(choices) {
   return choices.map((c) => String(c))
 }
 
+/** UTC midnight for `d`'s calendar day in UTC, and the next day's midnight (exclusive end). */
+function utcDayRange(d = new Date()) {
+  const start = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0),
+  )
+  const end = new Date(start)
+  end.setUTCDate(end.getUTCDate() + 1)
+  return { start, end }
+}
+
 /** Client-supplied Socratic UI snapshot; sanitized before persisting for analytics. */
 function sanitizeSocraticFeedbackContext(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -800,6 +810,10 @@ router.post(
  * POST /api/quiz/ai-collections/:collectionId/submit
  * Body: { answers: [{ questionId, selectedOriginalIndex }] } (indices in DB choice order)
  * Grades server-side, saves submission for analytics (Postgres / Supabase).
+ *
+ * Perfect score XP: base 100 per perfect submit (unchanged for retries).
+ * Same-day streak (UTC calendar day): first perfect on a *different* quiz today → +20% of base
+ * (20 XP) on the first perfect of *this* quiz today only (no streak on same-quiz retries).
  */
 router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res, next) => {
   try {
@@ -872,11 +886,45 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
 
     const totalQuestions = col.questions.length
     const PERFECT_SCORE_XP = 100
+    const SAME_DAY_STREAK_BONUS_RATE = 0.2
     const isPerfectScore = totalQuestions > 0 && score === totalQuestions
     const perfectScoreXpAwarded = isPerfectScore ? PERFECT_SCORE_XP : 0
 
-    const { lifetimeAiQuizSubmissions, xp, xpAwarded, level: newLevel } = await prisma.$transaction(
-      async (tx) => {
+    const { lifetimeAiQuizSubmissions, xp, xpAwarded, streakBonusXp, level: newLevel } =
+      await prisma.$transaction(async (tx) => {
+        const { start: dayStart, end: dayEnd } = utcDayRange(new Date())
+        const priorPerfectOthers = await tx.aiQuizSubmission.findMany({
+          where: {
+            userId: req.user.id,
+            createdAt: { gte: dayStart, lt: dayEnd },
+            collectionId: { not: col.id },
+          },
+          select: { collectionId: true, score: true, totalQuestions: true },
+        })
+        const distinctOtherPerfectToday = new Set(
+          priorPerfectOthers
+            .filter((s) => s.totalQuestions > 0 && s.score === s.totalQuestions)
+            .map((s) => s.collectionId),
+        ).size
+        const priorSameQuizToday = await tx.aiQuizSubmission.findMany({
+          where: {
+            userId: req.user.id,
+            collectionId: col.id,
+            createdAt: { gte: dayStart, lt: dayEnd },
+          },
+          select: { score: true, totalQuestions: true },
+        })
+        const alreadyPerfectThisQuizToday = priorSameQuizToday.some(
+          (s) => s.totalQuestions > 0 && s.score === s.totalQuestions,
+        )
+        const streakBonusXpCalc =
+          isPerfectScore &&
+          !alreadyPerfectThisQuizToday &&
+          distinctOtherPerfectToday > 0
+            ? Math.floor(PERFECT_SCORE_XP * SAME_DAY_STREAK_BONUS_RATE)
+            : 0
+        const totalXpGained = perfectScoreXpAwarded + streakBonusXpCalc
+
         await tx.aiQuizSubmission.create({
           data: {
             userId: req.user.id,
@@ -893,6 +941,10 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
               submittedAt: new Date().toISOString(),
               answers: detailAnswers,
               perfectScoreXpAwarded,
+              streakBonusXp: streakBonusXpCalc,
+              sameDayDistinctPerfectOthersBefore: distinctOtherPerfectToday,
+              alreadyPerfectThisQuizTodayBefore: alreadyPerfectThisQuizToday,
+              streakBonusRate: SAME_DAY_STREAK_BONUS_RATE,
             },
           },
         })
@@ -900,7 +952,7 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
           where: { id: req.user.id },
           data: {
             aiQuizSubmissionCount: { increment: 1 },
-            ...(isPerfectScore ? { xp: { increment: PERFECT_SCORE_XP } } : {}),
+            ...(totalXpGained > 0 ? { xp: { increment: totalXpGained } } : {}),
           },
           select: { aiQuizSubmissionCount: true, xp: true },
         })
@@ -912,11 +964,11 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
         return {
           lifetimeAiQuizSubmissions: u.aiQuizSubmissionCount,
           xp: u.xp,
-          xpAwarded: perfectScoreXpAwarded,
+          xpAwarded: totalXpGained,
+          streakBonusXp: streakBonusXpCalc,
           level: nextLevel,
         }
-      },
-    )
+      })
 
     return res.status(201).json({
       ok: true,
@@ -925,6 +977,8 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
       lifetimeAiQuizSubmissions,
       xp,
       xpAwarded,
+      perfectScoreXp: perfectScoreXpAwarded,
+      streakBonusXp,
       level: newLevel,
       results: detailAnswers.map((d) => ({
         questionId: d.questionId,
