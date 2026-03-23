@@ -667,7 +667,7 @@ function QuizAiRun() {
                       title="Feedback"
                     >
                       <span className="material-symbols-outlined text-[13px] leading-none" aria-hidden>
-                        question_mark
+                        feedback
                       </span>
                     </button>
                   </div>
@@ -844,6 +844,13 @@ function QuizAiRun() {
             >
             <header>
               <h1 className="text-xl font-bold text-white">{play.title}</h1>
+              {typeof play.poolQuestionCount === 'number' && play.poolQuestionCount > 0 ? (
+                <p className="mt-1 text-[11px] leading-snug text-slate-500">
+                  {play.playQuestionCount ?? prepared?.length ?? 0} of {play.poolQuestionCount} in
+                  pool — each start draws a fresh mix (previous round&apos;s questions are skipped when
+                  the pool is large enough).
+                </p>
+              ) : null}
             </header>
             <ol className="space-y-8 list-decimal list-inside marker:text-primary marker:font-bold">
               {prepared.map((p) => {

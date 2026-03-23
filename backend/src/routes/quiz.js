@@ -26,6 +26,28 @@ const upload = multer({
 const QUIZ_IMPORT_BUCKET =
   process.env.SUPABASE_QUIZ_IMPORT_BUCKET || 'quiz-imports'
 
+/** MCQs served per play session when the pooled collection has more than this many questions. */
+const PLAY_QUIZ_QUESTION_COUNT = 10
+
+function shuffleInPlace(arr) {
+  const a = arr
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/** @param {unknown} detailJson */
+function questionIdsFromSubmissionDetail(detailJson) {
+  if (!detailJson || typeof detailJson !== 'object' || Array.isArray(detailJson)) return []
+  const answers = /** @type {{ answers?: { questionId?: string }[] }} */ (detailJson).answers
+  if (!Array.isArray(answers)) return []
+  return answers
+    .map((x) => (x && typeof x.questionId === 'string' ? x.questionId : null))
+    .filter(Boolean)
+}
+
 /**
  * @param {string} relativePath e.g. "quiz-imports/userId/batch/file.pdf"
  */
@@ -403,8 +425,17 @@ router.get('/table', requireAuth, async (req, res, next) => {
             where: { id: { in: importIds } },
             include: {
               files: { orderBy: { id: 'asc' } },
+              primaryCollection: {
+                select: {
+                  id: true,
+                  _count: { select: { questions: true } },
+                },
+              },
               aiQuizCollections: {
-                select: { _count: { select: { questions: true } } },
+                select: {
+                  id: true,
+                  _count: { select: { questions: true } },
+                },
               },
             },
           })
@@ -429,6 +460,25 @@ router.get('/table', requireAuth, async (req, res, next) => {
       submissionAggPromise,
     ])
 
+    const versionIdSet = new Set(aiIds)
+    for (const b of batches) {
+      if (b.primaryCollectionId) versionIdSet.add(b.primaryCollectionId)
+      for (const c of b.aiQuizCollections || []) {
+        if (c.id) versionIdSet.add(c.id)
+      }
+    }
+    const versionRows =
+      versionIdSet.size > 0
+        ? await prisma.aiQuizQuestion.groupBy({
+            by: ['collectionId'],
+            where: { collectionId: { in: [...versionIdSet] } },
+            _max: { generationVersion: true },
+          })
+        : []
+    const maxGenByCollectionId = Object.fromEntries(
+      versionRows.map((r) => [r.collectionId, r._max.generationVersion ?? 1]),
+    )
+
     const batchById = Object.fromEntries(batches.map((b) => [b.id, b]))
     const collectionById = Object.fromEntries(collections.map((c) => [c.id, c]))
 
@@ -447,6 +497,23 @@ router.get('/table', requireAuth, async (req, res, next) => {
           const hasGeneratedQuiz = (b.aiQuizCollections || []).some(
             (c) => (c._count?.questions ?? 0) > 0,
           )
+          const pid = b.primaryCollectionId
+          const cols = b.aiQuizCollections || []
+          const sumAllQuestions = cols.reduce((sum, c) => sum + (c._count?.questions ?? 0), 0)
+          let maxVAcross = 1
+          for (const c of cols) {
+            const v = maxGenByCollectionId[c.id] ?? 1
+            if (v > maxVAcross) maxVAcross = v
+          }
+          let poolVersion = 0
+          let totalPoolQuestions = 0
+          if (pid && b.primaryCollection) {
+            poolVersion = Math.max(maxGenByCollectionId[pid] ?? 1, maxVAcross)
+            totalPoolQuestions = sumAllQuestions
+          } else if (hasGeneratedQuiz) {
+            totalPoolQuestions = sumAllQuestions
+            poolVersion = maxVAcross
+          }
           return {
             kind: 'import',
             batchId: b.id,
@@ -455,6 +522,9 @@ router.get('/table', requireAuth, async (req, res, next) => {
             courseNote: b.courseNote,
             files: b.files,
             hasGeneratedQuiz,
+            primaryCollectionId: pid ?? null,
+            poolVersion: hasGeneratedQuiz ? poolVersion : 0,
+            totalPoolQuestions,
           }
         }
         const c = collectionById[r.id]
@@ -469,6 +539,7 @@ router.get('/table', requireAuth, async (req, res, next) => {
           batchId: c.batchId,
           model: c.model,
           questionCount: c._count.questions,
+          poolVersion: maxGenByCollectionId[c.id] ?? 1,
           sourceFiles: c.batch?.files ?? [],
           userHasPerfectScore: perfectCollectionIds.has(c.id),
           userHasAttempted: attemptedCollectionIds.has(c.id),
@@ -512,6 +583,18 @@ router.get('/ai-collections', requireAuth, async (req, res, next) => {
     })
 
     const collectionIds = collections.map((c) => c.id)
+    const genRows =
+      collectionIds.length > 0
+        ? await prisma.aiQuizQuestion.groupBy({
+            by: ['collectionId'],
+            where: { collectionId: { in: collectionIds } },
+            _max: { generationVersion: true },
+          })
+        : []
+    const maxGenByCollectionId = Object.fromEntries(
+      genRows.map((r) => [r.collectionId, r._max.generationVersion ?? 1]),
+    )
+
     const perfectCollectionIds = new Set()
     const attemptedCollectionIds = new Set()
     if (collectionIds.length > 0) {
@@ -541,6 +624,7 @@ router.get('/ai-collections', requireAuth, async (req, res, next) => {
         model: c.model,
         createdAt: c.createdAt,
         questionCount: c._count.questions,
+        poolVersion: maxGenByCollectionId[c.id] ?? 1,
         sourceFiles: c.batch?.files ?? [],
         userHasPerfectScore: perfectCollectionIds.has(c.id),
         userHasAttempted: attemptedCollectionIds.has(c.id),
@@ -602,10 +686,14 @@ router.get(
 /**
  * GET /api/quiz/ai-collections/:collectionId/play
  * Questions for taking the quiz (no correct answers). Any authenticated user.
+ * Pooled collections: up to PLAY_QUIZ_QUESTION_COUNT random questions; prefers avoiding the
+ * set from the user's previous attempt on this collection when the pool is large enough.
  */
 router.get('/ai-collections/:collectionId/play', requireAuth, async (req, res, next) => {
   try {
     const { collectionId } = req.params
+    const userId = req.user.id
+
     const col = await prisma.aiQuizCollection.findUnique({
       where: { id: collectionId },
       include: {
@@ -618,13 +706,36 @@ router.get('/ai-collections/:collectionId/play', requireAuth, async (req, res, n
     if (!col) {
       return res.status(404).json({ error: 'Collection not found' })
     }
+
+    const all = col.questions.map((q) => ({
+      id: q.id,
+      stem: q.stem,
+      choices: choiceArrayFromJson(q.choices),
+    }))
+
+    const lastSub = await prisma.aiQuizSubmission.findFirst({
+      where: { userId, collectionId },
+      orderBy: { createdAt: 'desc' },
+      select: { detailJson: true },
+    })
+    const lastIds = new Set(questionIdsFromSubmissionDetail(lastSub?.detailJson))
+    let pool = all
+    if (lastIds.size > 0 && all.length > lastIds.size) {
+      const without = all.filter((q) => !lastIds.has(q.id))
+      if (without.length >= PLAY_QUIZ_QUESTION_COUNT) {
+        pool = without
+      }
+    }
+
+    shuffleInPlace(pool)
+    const take = Math.min(PLAY_QUIZ_QUESTION_COUNT, pool.length)
+    const selected = pool.slice(0, take)
+
     return res.json({
       title: col.title,
-      questions: col.questions.map((q) => ({
-        id: q.id,
-        stem: q.stem,
-        choices: choiceArrayFromJson(q.choices),
-      })),
+      questions: selected,
+      playQuestionCount: selected.length,
+      poolQuestionCount: all.length,
     })
   } catch (err) {
     return next(err)
@@ -832,8 +943,14 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
     if (!Array.isArray(answers)) {
       return res.status(400).json({ error: 'answers must be an array' })
     }
-    if (answers.length !== col.questions.length) {
-      return res.status(400).json({ error: 'Submit exactly one answer per question.' })
+    const maxPerAttempt = Math.min(PLAY_QUIZ_QUESTION_COUNT, col.questions.length)
+    if (answers.length < 1) {
+      return res.status(400).json({ error: 'Submit at least one answer.' })
+    }
+    if (answers.length > maxPerAttempt) {
+      return res.status(400).json({
+        error: `Submit at most ${maxPerAttempt} answer(s) for this attempt.`,
+      })
     }
 
     const byQuestionId = new Map(col.questions.map((q) => [q.id, q]))
@@ -858,15 +975,15 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
       }
     }
 
-    if (seen.size !== col.questions.length) {
-      return res.status(400).json({ error: 'Missing answers for some questions' })
+    if (seen.size !== answers.length) {
+      return res.status(400).json({ error: 'Invalid answers payload' })
     }
 
     const detailAnswers = []
     let score = 0
 
-    for (const q of col.questions) {
-      const a = answers.find((x) => x.questionId === q.id)
+    for (const a of answers) {
+      const q = byQuestionId.get(a.questionId)
       const choiceList = choiceArrayFromJson(q.choices)
       const selectedOriginalIndex = a.selectedOriginalIndex
       const isCorrect = selectedOriginalIndex === q.correctIndex
@@ -884,7 +1001,7 @@ router.post('/ai-collections/:collectionId/submit', requireAuth, async (req, res
       })
     }
 
-    const totalQuestions = col.questions.length
+    const totalQuestions = answers.length
     const PERFECT_SCORE_XP = 100
     const SAME_DAY_STREAK_BONUS_RATE = 0.2
     const isPerfectScore = totalQuestions > 0 && score === totalQuestions
@@ -1204,8 +1321,74 @@ router.post(
         })
       }
 
-      const collection = await prisma.$transaction(async (tx) => {
-        const col = await tx.aiQuizCollection.create({
+      const out = await prisma.$transaction(async (tx) => {
+        let col = null
+        let primaryId = batch.primaryCollectionId
+
+        if (primaryId) {
+          col = await tx.aiQuizCollection.findFirst({
+            where: { id: primaryId, batchId: batch.id },
+          })
+        }
+        if (!col) {
+          const oldest = await tx.aiQuizCollection.findFirst({
+            where: { batchId: batch.id },
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          })
+          if (oldest) {
+            col = oldest
+            await tx.quizImportBatch.update({
+              where: { id: batch.id },
+              data: { primaryCollectionId: oldest.id },
+            })
+          }
+        }
+
+        if (col) {
+          const maxOrder = await tx.aiQuizQuestion.aggregate({
+            where: { collectionId: col.id },
+            _max: { orderIndex: true },
+          })
+          const maxGen = await tx.aiQuizQuestion.aggregate({
+            where: { collectionId: col.id },
+            _max: { generationVersion: true },
+          })
+          const nextGen = (maxGen._max.generationVersion ?? 0) + 1
+          const baseOrder = (maxOrder._max.orderIndex ?? -1) + 1
+
+          await tx.aiQuizQuestion.createMany({
+            data: generated.questions.map((q, i) => ({
+              collectionId: col.id,
+              orderIndex: baseOrder + i,
+              generationVersion: nextGen,
+              stem: q.stem,
+              choices: q.choices,
+              correctIndex: q.correctIndex,
+              explanation: q.explanation ?? null,
+              sourceSnippet: q.sourceSnippet ?? null,
+            })),
+          })
+
+          await tx.aiQuizCollection.update({
+            where: { id: col.id },
+            data: {
+              title: generated.title,
+              model: resolvedModel,
+            },
+          })
+
+          const total = await tx.aiQuizQuestion.count({ where: { collectionId: col.id } })
+          return {
+            collectionId: col.id,
+            title: generated.title,
+            questionCount: total,
+            pooledAppend: true,
+            generationVersion: nextGen,
+            model: resolvedModel,
+          }
+        }
+
+        const newCol = await tx.aiQuizCollection.create({
           data: {
             userId: req.user.id,
             batchId: batch.id,
@@ -1216,6 +1399,7 @@ router.post(
             questions: {
               create: generated.questions.map((q, i) => ({
                 orderIndex: i,
+                generationVersion: 1,
                 stem: q.stem,
                 choices: q.choices,
                 correctIndex: q.correctIndex,
@@ -1226,15 +1410,28 @@ router.post(
           },
           include: { questions: { orderBy: { orderIndex: 'asc' } } },
         })
-        return col
+        await tx.quizImportBatch.update({
+          where: { id: batch.id },
+          data: { primaryCollectionId: newCol.id },
+        })
+        return {
+          collectionId: newCol.id,
+          title: newCol.title,
+          questionCount: newCol.questions.length,
+          pooledAppend: false,
+          generationVersion: 1,
+          model: newCol.model,
+        }
       })
 
       return res.status(201).json({
         ok: true,
-        collectionId: collection.id,
-        title: collection.title,
-        questionCount: collection.questions.length,
-        model: collection.model,
+        collectionId: out.collectionId,
+        title: out.title,
+        questionCount: out.questionCount,
+        pooledAppend: out.pooledAppend,
+        poolGenerationVersion: out.generationVersion,
+        model: out.model,
       })
     } catch (err) {
       return next(err)

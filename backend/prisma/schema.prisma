@@ -141,6 +141,9 @@ model QuizImportBatch {
   createdAt  DateTime @default(now())
   files      QuizImportFile[]
   aiQuizCollections AiQuizCollection[]
+  /// Canonical pooled quiz for this import; re-generating appends questions here ([Ver2], [Ver3]…).
+  primaryCollectionId String? @unique
+  primaryCollection   AiQuizCollection? @relation("ImportBatchPrimaryCollection", fields: [primaryCollectionId], references: [id], onDelete: SetNull)
 }
 
 /// AI-generated MCQ set from imported files (Path A: Gemini file → JSON → DB).
@@ -158,6 +161,7 @@ model AiQuizCollection {
   questions   AiQuizQuestion[]
   submissions AiQuizSubmission[]
   socraticHintFeedbacks SocraticHintFeedback[]
+  primaryForImportBatch QuizImportBatch? @relation("ImportBatchPrimaryCollection")
 }
 
 /// Learner ratings / free-text feedback on Socratic hints (analytics; stored in Postgres/Supabase).
@@ -201,6 +205,8 @@ model AiQuizQuestion {
   collectionId  String
   collection    AiQuizCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   orderIndex    Int
+  /// Increments each time admin runs Generate on this import batch (pooled [Ver1], [Ver2]…).
+  generationVersion Int          @default(1)
   stem          String           @db.Text
   choices       Json
   correctIndex  Int

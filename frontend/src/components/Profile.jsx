@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import TermsThemeStyles from './TermsThemeStyles'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
@@ -94,6 +95,40 @@ function buildHeatmapWeekIndexTicks(weekCount, step) {
   return ticks
 }
 
+function ProfileXpRulesTooltipContent({ displayLevel, tier }) {
+  return (
+    <>
+      <span className="block font-bold text-slate-100 mb-1.5">XP rules</span>
+      <span className="block text-slate-300">
+        Perfect score on an AI quiz (every question correct) adds{' '}
+        <span className="font-semibold text-amber-200/95">+100 XP</span> per attempt.
+      </span>
+      <span className="block mt-2 text-slate-300">
+        <span className="font-semibold text-emerald-200/90">Same-day streak (UTC):</span>{' '}
+        if you already aced at least one <em className="not-italic text-slate-200">other</em> quiz
+        today, your <em className="not-italic text-slate-200">first</em> perfect on each additional
+        quiz that day also earns{' '}
+        <span className="font-semibold text-amber-200/95">+20 XP</span> (20% of the 100 perfect
+        bonus). The first perfect of the day has no streak; re-perfecting the same quiz the same day
+        is +100 only—no extra streak.
+      </span>
+      <span className="block mt-2 text-slate-400 border-t border-slate-700/80 pt-2">
+        {displayLevel >= MAX_ACCOUNT_LEVEL ? (
+          <>Max level {MAX_ACCOUNT_LEVEL} reached ({tier.name}).</>
+        ) : (
+          <>
+            Levels 1–{MAX_ACCOUNT_LEVEL}: each step doubles (500, 1k, 2k…). You need{' '}
+            <span className="text-slate-300 font-medium">
+              {xpStepForLevelUp(displayLevel).toLocaleString()} XP
+            </span>{' '}
+            in this bracket to reach level {displayLevel + 1}. Bar and ring colors match your tier.
+          </>
+        )}
+      </span>
+    </>
+  )
+}
+
 function Profile() {
   const location = useLocation()
   const { username: profileUsernameParam = '' } = useParams()
@@ -107,6 +142,75 @@ function Profile() {
   const [learningActivity, setLearningActivity] = useState(null)
   const [viewerIsSubject, setViewerIsSubject] = useState(() => !profileUsernameParam)
   const apiBaseUrl = getApiBaseUrl()
+
+  const xpHelpBtnRef = useRef(null)
+  const xpTooltipLeaveTimerRef = useRef(null)
+  const [xpTooltipOpen, setXpTooltipOpen] = useState(false)
+  const [xpTooltipStyle, setXpTooltipStyle] = useState(null)
+
+  const measureXpTooltipPosition = useCallback(() => {
+    const el = xpHelpBtnRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    setXpTooltipStyle({
+      position: 'fixed',
+      top: r.bottom + 8,
+      right: Math.max(16, window.innerWidth - r.right),
+      width: 'min(22rem, calc(100vw - 2.5rem))',
+      zIndex: 100,
+    })
+  }, [])
+
+  const openXpTooltip = useCallback(() => {
+    if (xpTooltipLeaveTimerRef.current != null) {
+      window.clearTimeout(xpTooltipLeaveTimerRef.current)
+      xpTooltipLeaveTimerRef.current = null
+    }
+    measureXpTooltipPosition()
+    setXpTooltipOpen(true)
+  }, [measureXpTooltipPosition])
+
+  const scheduleCloseXpTooltip = useCallback(() => {
+    if (xpTooltipLeaveTimerRef.current != null) {
+      window.clearTimeout(xpTooltipLeaveTimerRef.current)
+    }
+    xpTooltipLeaveTimerRef.current = window.setTimeout(() => {
+      xpTooltipLeaveTimerRef.current = null
+      setXpTooltipOpen(false)
+    }, 150)
+  }, [])
+
+  const cancelCloseXpTooltip = useCallback(() => {
+    if (xpTooltipLeaveTimerRef.current != null) {
+      window.clearTimeout(xpTooltipLeaveTimerRef.current)
+      xpTooltipLeaveTimerRef.current = null
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!xpTooltipOpen) return
+    measureXpTooltipPosition()
+  }, [xpTooltipOpen, measureXpTooltipPosition])
+
+  useEffect(() => {
+    if (!xpTooltipOpen) return undefined
+    const onReposition = () => measureXpTooltipPosition()
+    window.addEventListener('resize', onReposition)
+    window.addEventListener('scroll', onReposition, true)
+    return () => {
+      window.removeEventListener('resize', onReposition)
+      window.removeEventListener('scroll', onReposition, true)
+    }
+  }, [xpTooltipOpen, measureXpTooltipPosition])
+
+  useEffect(
+    () => () => {
+      if (xpTooltipLeaveTimerRef.current != null) {
+        window.clearTimeout(xpTooltipLeaveTimerRef.current)
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     setViewerIsSubject(!profileUsernameParam)
@@ -537,49 +641,22 @@ function Profile() {
                       {nextStepXp != null ? nextStepXp.toLocaleString() : '—'} XP
                     </span>
                   )}
-                  <span className="relative inline-flex shrink-0 group/xphelp">
+                  <span
+                    className="relative inline-flex shrink-0"
+                    onMouseEnter={openXpTooltip}
+                    onMouseLeave={scheduleCloseXpTooltip}
+                  >
                     <button
+                      ref={xpHelpBtnRef}
                       type="button"
                       className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-500/55 bg-slate-800/80 px-1 text-[11px] font-bold leading-none text-slate-400 hover:border-primary/45 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-help"
                       aria-label="How XP works"
-                      aria-describedby="profile-xp-rules-tooltip"
+                      aria-describedby={xpTooltipOpen ? 'profile-xp-rules-tooltip' : undefined}
+                      onFocus={openXpTooltip}
+                      onBlur={scheduleCloseXpTooltip}
                     >
                       ?
                     </button>
-                    <span
-                      id="profile-xp-rules-tooltip"
-                      role="tooltip"
-                      className="pointer-events-none invisible absolute right-0 top-full z-30 mt-2 w-[min(22rem,calc(100vw-2.5rem))] origin-top-right scale-95 opacity-0 transition-[opacity,transform,visibility] duration-150 group-hover/xphelp:visible group-hover/xphelp:scale-100 group-hover/xphelp:opacity-100 group-focus-within/xphelp:visible group-focus-within/xphelp:scale-100 group-focus-within/xphelp:opacity-100 rounded-lg border border-slate-600/90 bg-slate-950/95 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-200 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md"
-                    >
-                      <span className="block font-bold text-slate-100 mb-1.5">XP rules</span>
-                      <span className="block text-slate-300">
-                        Perfect score on an AI quiz (every question correct) adds{' '}
-                        <span className="font-semibold text-amber-200/95">+100 XP</span> per attempt.
-                      </span>
-                      <span className="block mt-2 text-slate-300">
-                        <span className="font-semibold text-emerald-200/90">Same-day streak (UTC):</span>{' '}
-                        if you already aced at least one <em className="not-italic text-slate-200">other</em>{' '}
-                        quiz today, your <em className="not-italic text-slate-200">first</em> perfect on
-                        each additional quiz that day also earns{' '}
-                        <span className="font-semibold text-amber-200/95">+20 XP</span> (20% of the 100
-                        perfect bonus). The first perfect of the day has no streak; re-perfecting the
-                        same quiz the same day is +100 only—no extra streak.
-                      </span>
-                      <span className="block mt-2 text-slate-400 border-t border-slate-700/80 pt-2">
-                        {displayLevel >= MAX_ACCOUNT_LEVEL ? (
-                          <>Max level {MAX_ACCOUNT_LEVEL} reached ({tier.name}).</>
-                        ) : (
-                          <>
-                            Levels 1–{MAX_ACCOUNT_LEVEL}: each step doubles (500, 1k, 2k…). You need{' '}
-                            <span className="text-slate-300 font-medium">
-                              {xpStepForLevelUp(displayLevel).toLocaleString()} XP
-                            </span>{' '}
-                            in this bracket to reach level {displayLevel + 1}. Bar and ring colors match
-                            your tier.
-                          </>
-                        )}
-                      </span>
-                    </span>
                   </span>
                 </span>
               </div>
@@ -787,6 +864,20 @@ function Profile() {
           </div>
         </div>
       </div>
+      {xpTooltipOpen &&
+        createPortal(
+          <span
+            id="profile-xp-rules-tooltip"
+            role="tooltip"
+            style={xpTooltipStyle ?? undefined}
+            onMouseEnter={cancelCloseXpTooltip}
+            onMouseLeave={scheduleCloseXpTooltip}
+            className="max-h-[min(70vh,calc(100vh-2rem))] overflow-y-auto rounded-lg border border-slate-600/90 bg-slate-950/95 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-200 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md"
+          >
+            <ProfileXpRulesTooltipContent displayLevel={displayLevel} tier={tier} />
+          </span>,
+          document.body,
+        )}
     </div>
   )
 }

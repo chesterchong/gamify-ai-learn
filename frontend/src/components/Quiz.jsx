@@ -389,6 +389,11 @@ function Quiz() {
           files: Array.isArray(r.files) ? r.files : [],
           hasGeneratedQuiz: Boolean(r.hasGeneratedQuiz),
           createdAt: r.createdAt,
+          primaryCollectionId:
+            typeof r.primaryCollectionId === 'string' ? r.primaryCollectionId : null,
+          poolVersion: typeof r.poolVersion === 'number' ? r.poolVersion : 0,
+          totalPoolQuestions:
+            typeof r.totalPoolQuestions === 'number' ? r.totalPoolQuestions : 0,
         }
       }
       return {
@@ -406,6 +411,8 @@ function Quiz() {
         userHasAttempted:
           typeof r.userHasAttempted === 'boolean' ? r.userHasAttempted : null,
         hasGeneratedQuiz: true,
+        poolVersion: typeof r.poolVersion === 'number' ? r.poolVersion : 1,
+        questionCount: typeof r.questionCount === 'number' ? r.questionCount : 0,
       }
     })
   }, [quizRows, quizPage])
@@ -1015,6 +1022,18 @@ function Quiz() {
                           >
                             {importFileCount.label}
                           </span>
+                          {row.hasGeneratedQuiz && row.poolVersion > 0 ? (
+                            <span
+                              className="rounded border border-violet-500/35 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-violet-200/95"
+                              title={
+                                row.totalPoolQuestions > 0
+                                  ? `Pool generation Ver${row.poolVersion} · ${row.totalPoolQuestions} question(s) stored`
+                                  : `Pool generation Ver${row.poolVersion}`
+                              }
+                            >
+                              [Ver{row.poolVersion}]
+                            </span>
+                          ) : null}
                         </div>
                         {batchGenerate.error && batchGenerate.batchId === row.batchId && (
                           <p className="text-[10px] text-amber-400 max-w-full">{batchGenerate.error}</p>
@@ -1172,6 +1191,14 @@ function Quiz() {
                         >
                           {aiFileCount.label}
                         </span>
+                        {row.poolVersion > 0 ? (
+                          <span
+                            className="rounded border border-violet-500/35 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-violet-200/95"
+                            title={`Generation Ver${row.poolVersion} · ${row.questionCount ?? 0} question(s) in pool`}
+                          >
+                            [Ver{row.poolVersion}]
+                          </span>
+                        ) : null}
                       </div>
                       <div className="text-right flex flex-wrap items-center justify-end gap-1.5">
                         {isAdmin && editingThis && (
