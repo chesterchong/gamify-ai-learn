@@ -355,6 +355,17 @@ function QuizAiRun() {
       el = el.parentElement
     }
     if (!qid) return
+    const highlightCheck = validateSocraticHighlight(text)
+    if (!highlightCheck.ok) {
+      setSocraticPhase('idle')
+      setSocraticHighlight('')
+      setSocraticQuestionId(null)
+      setSocraticKeywords(null)
+      setSocraticSourceFile(null)
+      setSocraticExplanation(null)
+      setSocraticError(highlightCheck.error)
+      return
+    }
     setSocraticHighlight(text)
     setSocraticQuestionId(qid)
     setSocraticKeywords(null)
@@ -740,9 +751,8 @@ function QuizAiRun() {
                       <p className="text-[11px] text-amber-400/90">{socraticError}</p>
                     ) : null}
                     <p className="text-[11px] leading-snug text-slate-500">
-                      Highlight a phrase of{' '}
-                      <span className="font-medium text-slate-400">at least three words</span> in a
-                      question or answer so there is enough context for hints. Then confirm here if you
+                      Highlight a phrase in a question or answer. We only open hints when the selection
+                      looks like enough real context (not just filler words). Then confirm here if you
                       want guided reminders tied to this quiz&apos;s materials.
                     </p>
                   </div>
