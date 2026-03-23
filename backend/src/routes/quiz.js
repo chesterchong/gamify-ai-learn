@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import prisma from '../db/prisma.js'
 import requireAuth from '../middleware/requireAuth.js'
 import requireAdmin from '../middleware/requireAdmin.js'
+import { validateSocraticHighlight } from '../lib/socraticHighlightRules.js'
 import {
   generateQuizFromBuffers,
   generateSocraticHint,
@@ -768,8 +769,9 @@ router.post(
 
       const ht =
         typeof highlightedText === 'string' ? highlightedText.trim().replace(/\s+/g, ' ') : ''
-      if (ht.length < 2 || ht.length > 500) {
-        return res.status(400).json({ error: 'highlightedText must be 2–500 characters' })
+      const highlightCheck = validateSocraticHighlight(ht)
+      if (!highlightCheck.ok) {
+        return res.status(400).json({ error: highlightCheck.error })
       }
 
       const col = await prisma.aiQuizCollection.findUnique({

@@ -4,6 +4,7 @@ import TermsThemeStyles from './TermsThemeStyles'
 import { formatPageTitle } from '../lib/documentTitle.js'
 import { formatEstimatedQuizTime, shuffleDisplayPermutation } from '../lib/quizRunUtils.js'
 import { getApiBaseUrl } from '../lib/apiBaseUrl.js'
+import { validateSocraticHighlight } from '../lib/socraticHighlightRules.js'
 
 /**
  * Desktop quiz row uses lg:h-[calc(100dvh-13.5rem)]:
@@ -365,6 +366,11 @@ function QuizAiRun() {
 
   const requestSocraticKeywords = useCallback(async () => {
     if (!collectionId || !socraticHighlight) return
+    const highlightCheck = validateSocraticHighlight(socraticHighlight)
+    if (!highlightCheck.ok) {
+      setSocraticError(highlightCheck.error)
+      return
+    }
     setSocraticPhase('loading_keywords')
     setSocraticError('')
     try {
@@ -404,6 +410,12 @@ function QuizAiRun() {
 
   const requestSocraticExplain = useCallback(async () => {
     if (!collectionId || !socraticHighlight || !socraticKeywords?.length) return
+    const highlightCheck = validateSocraticHighlight(socraticHighlight)
+    if (!highlightCheck.ok) {
+      setSocraticError(highlightCheck.error)
+      setSocraticPhase('keywords')
+      return
+    }
     setSocraticPhase('loading_explain')
     setSocraticError('')
     try {
@@ -723,10 +735,17 @@ function QuizAiRun() {
                   </div>
                 )}
                 {socraticPhase === 'idle' && (
-                  <p className="text-[11px] leading-snug text-slate-500">
-                    Highlight any text in a question or answer, then confirm here if you want guided
-                    hints tied to this quiz&apos;s materials.
-                  </p>
+                  <div className="space-y-2">
+                    {socraticError ? (
+                      <p className="text-[11px] text-amber-400/90">{socraticError}</p>
+                    ) : null}
+                    <p className="text-[11px] leading-snug text-slate-500">
+                      Highlight a phrase of{' '}
+                      <span className="font-medium text-slate-400">at least three words</span> in a
+                      question or answer so there is enough context for hints. Then confirm here if you
+                      want guided reminders tied to this quiz&apos;s materials.
+                    </p>
+                  </div>
                 )}
                 {socraticPhase === 'confirm_hint' && (
                   <div className="space-y-2">
