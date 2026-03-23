@@ -8,6 +8,9 @@ import ShinyText from './ShinyText'
 
 function Signup() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const redirectAfterAuth =
+    (location.state && location.state.from && location.state.from.pathname) || '/dash'
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [mode, setMode] = useState('signup') // 'login' or 'signup'
