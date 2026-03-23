@@ -8,6 +8,7 @@ import requireAuth from '../middleware/requireAuth.js'
 import requireAdmin from '../middleware/requireAdmin.js'
 import {
   generateQuizFromBuffers,
+  generateSocraticHint,
   effectiveMimeType,
   isLikelyGeminiSupportedMime,
 } from '../services/geminiQuiz.js'
@@ -47,6 +48,30 @@ function splitStoragePath(relativePath) {
 function choiceArrayFromJson(choices) {
   if (!Array.isArray(choices)) return []
   return choices.map((c) => String(c))
+}
+
+/** Client-supplied Socratic UI snapshot; sanitized before persisting for analytics. */
+function sanitizeSocraticFeedbackContext(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {}
+  }
+  return {
+    phase: typeof raw.phase === 'string' ? raw.phase.slice(0, 64) : null,
+    highlightedText:
+      typeof raw.highlightedText === 'string' ? raw.highlightedText.slice(0, 500) : null,
+    questionId: typeof raw.questionId === 'string' ? raw.questionId.slice(0, 64) : null,
+    keywords: Array.isArray(raw.keywords)
+      ? raw.keywords
+          .slice(0, 20)
+          .map((k) => String(k).trim().slice(0, 200))
+          .filter(Boolean)
+      : null,
+    sourceFile: typeof raw.sourceFile === 'string' ? raw.sourceFile.slice(0, 300) : null,
+    explanationPreview:
+      typeof raw.explanationPreview === 'string'
+        ? raw.explanationPreview.trim().slice(0, 2000)
+        : null,
+  }
 }
 
 async function downloadImportFileBuffer(supabase, relativePath) {
@@ -595,6 +620,181 @@ router.get('/ai-collections/:collectionId/play', requireAuth, async (req, res, n
     return next(err)
   }
 })
+
+/**
+ * POST /api/quiz/ai-collections/:collectionId/socratic-hint
+ * Body: { highlightedText, questionId?, step: "keywords"|"explain", keywords?: string[] }
+ * Uses Gemini + collection metadata and optional per-question sourceSnippet (never exposes answers).
+ */
+router.post(
+  '/ai-collections/:collectionId/socratic-hint',
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const apiKey = process.env.GEMINI_API_KEY
+      if (!apiKey || !String(apiKey).trim()) {
+        return res.status(503).json({
+          error: 'Socratic hints are unavailable (GEMINI_API_KEY is not configured).',
+        })
+      }
+
+      const { collectionId } = req.params
+      const { highlightedText, questionId, step, keywords } = req.body || {}
+
+      if (step !== 'keywords' && step !== 'explain') {
+        return res.status(400).json({ error: 'step must be "keywords" or "explain"' })
+      }
+
+      const ht =
+        typeof highlightedText === 'string' ? highlightedText.trim().replace(/\s+/g, ' ') : ''
+      if (ht.length < 2 || ht.length > 500) {
+        return res.status(400).json({ error: 'highlightedText must be 2–500 characters' })
+      }
+
+      const col = await prisma.aiQuizCollection.findUnique({
+        where: { id: collectionId },
+        select: {
+          id: true,
+          title: true,
+          courseCode: true,
+          courseNote: true,
+          batch: {
+            select: {
+              files: { select: { originalName: true }, orderBy: { id: 'asc' } },
+            },
+          },
+        },
+      })
+      if (!col) {
+        return res.status(404).json({ error: 'Collection not found' })
+      }
+
+      let questionStem
+      let sourceSnippet
+      if (questionId && typeof questionId === 'string') {
+        const q = await prisma.aiQuizQuestion.findFirst({
+          where: { id: questionId, collectionId },
+          select: { stem: true, sourceSnippet: true },
+        })
+        if (q) {
+          questionStem = q.stem
+          sourceSnippet = q.sourceSnippet
+        }
+      }
+
+      const sourceFilenames = (col.batch?.files || [])
+        .map((f) => f.originalName)
+        .filter((n) => typeof n === 'string' && n.trim())
+
+      let keywordList = []
+      if (step === 'explain') {
+        if (!Array.isArray(keywords) || keywords.length === 0) {
+          return res.status(400).json({ error: 'keywords array is required for explain step' })
+        }
+        keywordList = keywords
+          .slice(0, 12)
+          .map((k) => String(k).trim())
+          .filter(Boolean)
+        if (keywordList.length === 0) {
+          return res.status(400).json({ error: 'keywords array is required for explain step' })
+        }
+      }
+
+      const resolvedModel =
+        (typeof process.env.GEMINI_MODEL === 'string' && process.env.GEMINI_MODEL.trim()) ||
+        undefined
+
+      const payload = await generateSocraticHint({
+        apiKey: String(apiKey).trim(),
+        modelName: resolvedModel,
+        step,
+        highlightedText: ht,
+        quizTitle: col.title,
+        courseCode: col.courseCode,
+        courseNote: col.courseNote,
+        sourceFilenames,
+        questionStem,
+        sourceSnippet,
+        keywordsFromPrior: keywordList,
+      })
+
+      return res.json(payload)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[quiz/socratic-hint]', msg)
+      return res.status(502).json({
+        error: 'Failed to generate hint. Try again in a moment.',
+        detail: process.env.DEBUG_ERRORS === 'true' ? msg : undefined,
+      })
+    }
+  },
+)
+
+/**
+ * POST /api/quiz/ai-collections/:collectionId/socratic-feedback
+ * Body: { vote: "upvote"|"downvote"|"feedback", feedbackText?, context? }
+ * Persists learner ratings / free-text feedback for analytics (Postgres / Supabase).
+ */
+router.post(
+  '/ai-collections/:collectionId/socratic-feedback',
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const { collectionId } = req.params
+      const { vote, feedbackText, context } = req.body || {}
+
+      const v = typeof vote === 'string' ? vote.trim().toLowerCase() : ''
+      if (!['upvote', 'downvote', 'feedback'].includes(v)) {
+        return res.status(400).json({ error: 'vote must be upvote, downvote, or feedback' })
+      }
+
+      let text = typeof feedbackText === 'string' ? feedbackText.trim() : ''
+      if (v === 'feedback') {
+        if (text.length < 1) {
+          return res.status(400).json({ error: 'feedbackText is required for feedback votes' })
+        }
+        if (text.length > 2000) {
+          return res.status(400).json({ error: 'feedbackText must be at most 2000 characters' })
+        }
+      } else {
+        text = ''
+      }
+
+      const col = await prisma.aiQuizCollection.findUnique({
+        where: { id: collectionId },
+        select: { id: true },
+      })
+      if (!col) {
+        return res.status(404).json({ error: 'Collection not found' })
+      }
+
+      const safeContext = sanitizeSocraticFeedbackContext(context)
+      let questionId = null
+      if (safeContext.questionId) {
+        const q = await prisma.aiQuizQuestion.findFirst({
+          where: { id: safeContext.questionId, collectionId },
+          select: { id: true },
+        })
+        if (q) questionId = q.id
+      }
+
+      await prisma.socraticHintFeedback.create({
+        data: {
+          userId: req.user.id,
+          collectionId,
+          questionId,
+          vote: v,
+          feedbackText: v === 'feedback' ? text : null,
+          contextJson: safeContext,
+        },
+      })
+
+      return res.status(201).json({ ok: true })
+    } catch (err) {
+      return next(err)
+    }
+  },
+)
 
 /**
  * POST /api/quiz/ai-collections/:collectionId/submit

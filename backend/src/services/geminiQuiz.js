@@ -237,3 +237,126 @@ The "questions" array must contain exactly ${count} items.`
     )
   }
 }
+
+function parseHintJson(text) {
+  let raw = typeof text === 'string' ? text.trim() : String(text)
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenced) raw = fenced[1].trim()
+  return JSON.parse(raw)
+}
+
+/**
+ * Socratic quiz hints (keywords + optional deeper explanation). Text-only model call — uses
+ * filenames, course notes, question stem, and stored sourceSnippet when available.
+ *
+ * @param {object} params
+ * @param {string} params.apiKey
+ * @param {string} [params.modelName]
+ * @param {'keywords'|'explain'} params.step
+ * @param {string} params.highlightedText
+ * @param {string} params.quizTitle
+ * @param {string|null|undefined} params.courseCode
+ * @param {string|null|undefined} params.courseNote
+ * @param {string[]} params.sourceFilenames
+ * @param {string|null|undefined} params.questionStem
+ * @param {string|null|undefined} params.sourceSnippet
+ * @param {string[]} [params.keywordsFromPrior] required when step === 'explain'
+ */
+export async function generateSocraticHint(params) {
+  const {
+    apiKey,
+    modelName = process.env.GEMINI_MODEL || DEFAULT_MODEL,
+    step,
+    highlightedText,
+    quizTitle,
+    courseCode,
+    courseNote,
+    sourceFilenames = [],
+    questionStem,
+    sourceSnippet,
+    keywordsFromPrior = [],
+  } = params
+
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
+
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: step === 'keywords' ? 0.25 : 0.45,
+    },
+  })
+
+  const names = Array.isArray(sourceFilenames)
+    ? sourceFilenames.map((n) => String(n).trim()).filter(Boolean)
+    : []
+  const fileList =
+    names.length > 0
+      ? names.map((n) => `- ${n}`).join('\n')
+      : '(No named import files on record for this quiz.)'
+
+  if (step === 'keywords') {
+    const prompt = `You are a Socratic tutor. A student highlighted this phrase from a multiple-choice quiz:
+"""${highlightedText.replace(/"""/g, '"')}"""
+
+Quiz title: ${quizTitle}
+Course code: ${courseCode || 'n/a'}
+Course / batch notes: ${courseNote || 'n/a'}
+${questionStem ? `Question stem (context only): ${questionStem}` : ''}
+${sourceSnippet ? `Excerpt tied to this question when the quiz was authored (from study materials): ${sourceSnippet}` : ''}
+
+Filenames of the original study materials (import batch):
+${fileList}
+
+Return JSON only with this exact shape:
+{
+  "keywords": ["3 to 8 short reminder terms or concepts"],
+  "sourceFile": "EXACTLY one of the filenames listed above (copy the name character-for-character), OR the literal string Course context if none of those files fit"
+}
+
+Rules:
+- Keywords should help the student recall ideas from the materials; do not reveal which multiple-choice option (A/B/C/D) is correct.
+- "sourceFile" must be either an exact filename from the list above or "Course context".`
+
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    const raw = parseHintJson(text)
+    const keywords = Array.isArray(raw.keywords)
+      ? raw.keywords.map((k) => String(k).trim()).filter(Boolean).slice(0, 12)
+      : []
+    const sourceFile =
+      typeof raw.sourceFile === 'string' && raw.sourceFile.trim()
+        ? raw.sourceFile.trim().slice(0, 300)
+        : 'Course context'
+    if (keywords.length === 0) {
+      throw new Error('Model returned no keywords')
+    }
+    return { keywords, sourceFile }
+  }
+
+  const kw = keywordsFromPrior.slice(0, 12).join(', ')
+  const prompt = `You are a Socratic tutor. The student is taking a multiple-choice quiz.
+
+They highlighted: """${highlightedText.replace(/"""/g, '"')}"""
+They were already shown these reminder keywords: ${kw}
+${questionStem ? `Question stem: ${questionStem}` : ''}
+${sourceSnippet ? `Material excerpt from when the question was authored: ${sourceSnippet}` : ''}
+
+Write a short Socratic follow-up (2–5 sentences): use guiding questions and conceptual hints only.
+Do NOT state which multiple-choice option is correct. Do NOT give the direct factual answer if it would reveal the MCQ key.
+
+Return JSON only: { "explanation": "your text here" }`
+
+  const result = await model.generateContent(prompt)
+  const text = result.response.text()
+  const raw = parseHintJson(text)
+  const explanation =
+    typeof raw.explanation === 'string' && raw.explanation.trim()
+      ? raw.explanation.trim().slice(0, 4000)
+      : ''
+  if (!explanation) {
+    throw new Error('Model returned no explanation')
+  }
+  return { explanation }
+}

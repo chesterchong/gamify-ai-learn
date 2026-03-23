@@ -34,6 +34,7 @@ model User {
   quizImportBatches   QuizImportBatch[]
   aiQuizCollections   AiQuizCollection[]
   aiQuizSubmissions   AiQuizSubmission[]
+  socraticHintFeedbacks SocraticHintFeedback[]
 
   @@index([xp])
 }
@@ -156,6 +157,26 @@ model AiQuizCollection {
   createdAt   DateTime @default(now())
   questions   AiQuizQuestion[]
   submissions AiQuizSubmission[]
+  socraticHintFeedbacks SocraticHintFeedback[]
+}
+
+/// Learner ratings / free-text feedback on Socratic hints (analytics; stored in Postgres/Supabase).
+model SocraticHintFeedback {
+  id           String           @id @default(cuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collectionId String
+  collection   AiQuizCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  questionId   String?
+  /// upvote | downvote | feedback
+  vote         String
+  feedbackText String?        @db.Text
+  contextJson  Json
+  createdAt    DateTime         @default(now())
+
+  @@index([userId])
+  @@index([collectionId])
+  @@index([createdAt])
 }
 
 /// Learner attempt on an AI quiz (stored in Postgres / Supabase for analytics & AI insights).
