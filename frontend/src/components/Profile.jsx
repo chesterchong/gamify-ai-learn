@@ -364,8 +364,8 @@ function Profile() {
           animation: profile-name-shimmer 5.5s ease-in-out infinite alternate;
         }
       `}</style>
-      <section className="relative w-full glass-deep border-b border-slate-800/50 pt-10 pb-20">
-        <div className="relative max-w-6xl mx-auto w-full px-6 md:px-12 lg:px-16 flex flex-col md:flex-row items-center md:items-start gap-8 z-10">
+      <section className="relative w-full glass-deep border-b border-slate-800/50 pt-8 pb-14 sm:pt-10 sm:pb-20">
+        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-4 sm:gap-8 sm:px-6 md:flex-row md:items-start md:px-12 lg:px-16">
           <div className="relative group">
             <div
               className="profile-avatar-tier-ring relative w-32 h-32 md:w-40 md:h-40 rounded-full p-[3px]"
@@ -600,8 +600,8 @@ function Profile() {
           </div>
         </div>
       </section>
-      <div className="max-w-6xl mx-auto w-full px-6 md:px-12 lg:px-16 -mt-12 mb-6 pb-4 relative z-10 flex flex-col gap-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="relative z-10 mx-auto -mt-8 mb-6 flex w-full max-w-6xl flex-col gap-6 px-4 pb-4 sm:-mt-12 sm:gap-8 sm:px-6 md:px-12 lg:px-16">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3">
           <div className="relative overflow-hidden rounded-xl glass-card border border-slate-700/50 p-6 transition-all duration-200 hover:border-amber-500/40 hover:shadow-[0_0_24px_-4px_rgba(245,158,11,0.15)]">
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-500 to-orange-600" />
             <div className="flex items-start justify-between gap-3 pl-2">

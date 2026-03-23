@@ -25,7 +25,7 @@ function Home() {
   }, [apiBaseUrl])
 
   return (
-    <div className="selection:bg-primary selection:text-black relative overflow-hidden min-h-screen bg-[#030a12]">
+    <div className="selection:bg-primary selection:text-black relative min-h-screen min-h-[100dvh] overflow-x-clip bg-[#030a12]">
       {/* Nebula + aurora wave light (from home-sample) */}
       <div
         className="fixed inset-0 -z-[2]"
@@ -168,18 +168,30 @@ function Home() {
           animation: marquee-scroll 30s linear infinite;
         }
         .marquee-item {
-          min-width: 220px;
+          min-width: 160px;
           padding: 0.25rem 0.5rem;
           display: flex;
           align-items: center;
           gap: 0.5rem;
           text-transform: uppercase;
           letter-spacing: 0.06em;
-          font-size: 14px;
+          font-size: 12px;
           color: #cbd5f5;
           opacity: 0.4;
           filter: grayscale(1);
           transition: opacity 0.4s ease, filter 0.4s ease;
+        }
+        @media (min-width: 640px) {
+          .marquee-item {
+            min-width: 200px;
+            font-size: 13px;
+          }
+        }
+        @media (min-width: 768px) {
+          .marquee-item {
+            min-width: 220px;
+            font-size: 14px;
+          }
         }
         .marquee-item:hover {
           opacity: 1;
@@ -208,17 +220,17 @@ function Home() {
           text-shadow: 0 0 20px rgba(0, 242, 255, 0.25);
         }
       `}</style>
-      <main className="container mx-auto px-6 py-16 relative z-10 flex flex-col items-center">
-        <div className="relative min-h-[60vh] w-full max-w-5xl">
+      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-12 md:py-16">
+        <div className="relative min-h-[50vh] w-full sm:min-h-[60vh]">
           <GravityStarsBackground
             className="pointer-events-none absolute inset-0"
             starsOpacity={0.45}
             glowIntensity={8}
             movementSpeed={0.7}
           />
-          <div className="relative z-10 mt-6 flex flex-col items-center">
+          <div className="relative z-10 mt-4 flex flex-col items-center sm:mt-6">
             <Link
-              className="hero-glass-btn mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs text-gray-300 border-white/10 hero-pill-animate"
+              className="hero-glass-btn mb-4 inline-flex max-w-[calc(100vw-2rem)] items-center gap-2 truncate rounded-full border-white/10 px-3 py-2 text-[11px] text-gray-300 hero-pill-animate sm:mb-6 sm:max-w-none sm:px-4 sm:py-1.5 sm:text-xs touch-manipulation"
               to="/terms"
               aria-label="Generative AI mastery path now live"
             >
@@ -231,23 +243,23 @@ function Home() {
               <span className="material-symbols-outlined text-xs">chevron_right</span>
             </Link>
             <section
-              className="hero-glass-card w-full max-w-3xl px-8 py-10 md:px-12 md:py-14 rounded-3xl relative overflow-hidden hero-fade-up"
+              className="hero-glass-card relative w-full max-w-3xl overflow-hidden rounded-2xl px-5 py-8 hero-fade-up sm:rounded-3xl sm:px-8 sm:py-10 md:px-12 md:py-14"
               aria-labelledby="hero-title"
             >
-              <div className="absolute top-0 right-0 w-40 h-40 bg-cyan-500/10 blur-[80px] pointer-events-none" aria-hidden />
+              <div className="pointer-events-none absolute right-0 top-0 h-32 w-32 bg-cyan-500/10 blur-[80px] sm:h-40 sm:w-40" aria-hidden />
               <div className="relative z-10">
-                <h1 id="hero-title" className="text-4xl md:text-5xl font-semibold tracking-tight hero-cyan-glow mb-6 hero-cyan-text-glow">
+                <h1 id="hero-title" className="mb-4 text-3xl font-semibold tracking-tight hero-cyan-glow hero-cyan-text-glow sm:mb-6 sm:text-4xl md:text-5xl">
                   CSarena
                 </h1>
-                <h2 className="text-2xl md:text-4xl font-light text-white tracking-tight leading-snug mb-8">
+                <h2 className="mb-6 text-xl font-light leading-snug tracking-tight text-white sm:mb-8 sm:text-2xl md:text-4xl">
                   Master the <span className="italic hero-cyan-glow font-medium text-inherit">Machine</span> Intelligence
                 </h2>
-                <p className="text-base md:text-lg text-white/80 max-w-xl mb-10 leading-loose">
+                <p className="mb-8 max-w-xl text-sm leading-relaxed text-white/80 sm:mb-10 sm:text-base sm:leading-loose md:text-lg">
                   The gamified path to frontier AI and Computer Science. Embark on quests, conquer algorithms, and level up with verifiable skills.
                 </p>
                 {authStatus === 'unauthenticated' && (
                   <Link
-                    className="hero-glass-btn inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-white/10 hover:bg-cyan-500/10 transition-all group border-cyan-500/20 shadow-lg shadow-cyan-900/20 text-base font-medium"
+                    className="hero-glass-btn group inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-2xl border-cyan-500/20 bg-white/10 px-6 py-3 text-base font-medium shadow-lg shadow-cyan-900/20 transition-all hover:bg-cyan-500/10 sm:w-auto touch-manipulation"
                     to="/signup"
                   >
                     <span className="material-symbols-outlined text-white group-hover:text-[#00f2ff] transition-colors" aria-hidden>
@@ -266,11 +278,11 @@ function Home() {
               </div>
             </section>
           </div>
-          <div className="relative z-10 mt-16 w-full">
-            <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-4 text-center">
+          <div className="relative z-10 mt-10 w-full max-w-full sm:mt-16">
+            <p className="mb-3 text-center text-[10px] uppercase tracking-[0.3em] text-slate-500 sm:mb-4">
               Trusted By
             </p>
-            <div className="marquee">
+            <div className="marquee w-full max-w-full overflow-hidden">
               <div className="marquee-track">
                 <div className="marquee-item">
                   <span className="material-symbols-outlined text-2xl">school</span>
@@ -337,9 +349,9 @@ function Home() {
           </div>
         </div>
       </main>
-      <footer className="pb-16 text-[10px] text-slate-600 uppercase tracking-[0.2em] border-t border-slate-900 pt-8 relative z-10">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+      <footer className="relative z-10 border-t border-slate-900 pb-12 pt-8 text-[10px] uppercase tracking-[0.2em] text-slate-600 sm:pb-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex flex-col items-center justify-between gap-6 md:flex-row md:gap-4">
             <p>© 2026 CSARENA. ALL RIGHTS RESERVED.</p>
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="flex items-center gap-6">
@@ -364,9 +376,10 @@ function Home() {
         </div>
       </footer>
       <button
-        className="fixed bottom-8 right-8 w-12 h-12 border border-primary bg-background-dark text-primary flex items-center justify-center hover:bg-primary hover:text-black transition-all group"
+        className="group fixed bottom-6 right-4 z-30 flex h-12 min-h-12 w-12 min-w-12 items-center justify-center border border-primary bg-background-dark text-primary transition-all hover:bg-primary hover:text-black sm:bottom-8 sm:right-8 touch-manipulation"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         type="button"
+        aria-label="Back to top"
       >
         <span className="material-symbols-outlined text-xl">stat_1</span>
       </button>

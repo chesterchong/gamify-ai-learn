@@ -18,10 +18,16 @@
     linear-gradient(180deg, var(--page-bg-mid) 0%, var(--page-bg-base) 100%);
 }
 
+html {
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
 }
 
 /* Base canvas for glass depth (used by layout) */

@@ -97,7 +97,7 @@ function Learn() {
   return (
     <div className="selection:bg-primary selection:text-black min-h-screen">
       <TermsThemeStyles />
-      <main className="container mx-auto px-6 pt-2 pb-4">
+      <main className="mx-auto w-full max-w-6xl px-4 pb-6 pt-2 sm:px-6 sm:pb-8">
         {activeView === 'overview' && (
           <LearningPathOverview onOpenModule={handleOpenModule} />
         )}

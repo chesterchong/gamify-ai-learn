@@ -427,7 +427,7 @@ function Dashboard() {
       </div>
       <div className="dash-glow-line" aria-hidden="true" />
       <div className="dash-circuit-bg relative z-[1] isolate">
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-10 pb-24">
+        <div className="mx-auto w-full max-w-4xl px-4 py-6 pb-20 sm:px-6 sm:py-10 sm:pb-24">
           {loading && (
             <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
@@ -462,7 +462,7 @@ function Dashboard() {
               >
                 Your progress
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                 <div className="dash-stat-glow rounded-2xl border border-slate-700/60 bg-slate-900/40 backdrop-blur-sm p-5 relative overflow-hidden group hover:border-violet-500/35 transition-colors">
                   <div className="absolute -right-2 -top-2 opacity-[0.07] group-hover:opacity-[0.12] transition-opacity">
                     <span className="material-symbols-outlined text-7xl text-violet-400">quiz</span>
@@ -604,7 +604,7 @@ function Dashboard() {
                     {leaderboard.map((row) => (
                       <li
                         key={row.userId}
-                        className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 transition-colors ${
+                        className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors sm:flex-nowrap sm:gap-4 sm:px-5 sm:py-3.5 ${
                           row.isCurrentUser
                             ? 'bg-primary/10 shadow-[inset_4px_0_0_0_#137fec]'
                             : 'hover:bg-slate-800/30'
@@ -652,13 +652,13 @@ function Dashboard() {
                           </p>
                         </div>
                         {leaderboardTab === 'xp' && (
-                          <span className="shrink-0 text-sm font-bold tabular-nums text-slate-200">
+                          <span className="ml-auto flex w-full basis-full justify-end pl-2 text-sm font-bold tabular-nums text-slate-200 sm:ml-0 sm:w-auto sm:basis-auto sm:justify-start sm:pl-0">
                             {row.xp.toLocaleString()}{' '}
                             <span className="text-xs font-medium text-slate-500">XP</span>
                           </span>
                         )}
                         {leaderboardTab === 'accuracy' && (
-                          <div className="shrink-0 text-right">
+                          <div className="ml-auto w-full basis-full text-right sm:ml-0 sm:w-auto sm:basis-auto">
                             <span className="text-sm font-bold tabular-nums text-slate-200">
                               {formatAccuracy(row.accuracyPercent)}
                             </span>
