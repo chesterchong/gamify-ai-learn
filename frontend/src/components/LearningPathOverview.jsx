@@ -113,8 +113,8 @@ function LearningPathOverview({ onOpenModule }) {
       `}</style>
       <div className="glow-line" aria-hidden="true"></div>
       <div className="circuit-bg">
-        <div className="max-w-5xl mx-auto w-full p-6 lg:p-12 space-y-10 pb-24 relative z-10">
-          <header className="mb-10">
+        <div className="relative z-10 mx-auto w-full max-w-5xl space-y-8 px-4 py-6 pb-24 sm:space-y-10 sm:px-6 lg:p-12">
+          <header className="mb-6 sm:mb-10">
             <div className="mt-0 flex flex-col gap-3">
               <div className="flex flex-col md:flex-row gap-3">
                 <div className="relative flex-1">
@@ -174,7 +174,7 @@ function LearningPathOverview({ onOpenModule }) {
                   ].map((option) => (
                     <button
                       key={option.value}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors ${
+                      className={`min-h-10 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors touch-manipulation sm:min-h-0 sm:py-1.5 ${
                         difficultyFilter === option.value
                           ? option.activeClass
                           : 'text-slate-500 dark:text-slate-300 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/60'
@@ -219,7 +219,7 @@ function LearningPathOverview({ onOpenModule }) {
                   ].map((option) => (
                     <button
                       key={option.value}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors ${
+                      className={`min-h-10 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors touch-manipulation sm:min-h-0 sm:py-1.5 ${
                         statusFilter === option.value
                           ? option.activeClass
                           : 'text-slate-500 dark:text-slate-300 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/60'
@@ -239,16 +239,16 @@ function LearningPathOverview({ onOpenModule }) {
             {filteredCourses.map((course) => (
               <div
                 key={course.id}
-                className={`group relative glass-card rounded-2xl p-6 transition-all hover:translate-x-1 ${
+                className={`group relative glass-card rounded-2xl p-4 transition-all hover:translate-x-1 sm:p-6 ${
                   course.status === 'locked' ? 'opacity-60 grayscale-[0.8]' : 'shadow-xl shadow-primary/5'
                 }`}
                 onClick={() => course.status !== 'locked' && onOpenModule?.(course.id)}
                 role="button"
                 tabIndex={0}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <span className={`text-xs font-bold tracking-tighter ${course.status === 'locked' ? 'text-slate-400' : 'text-primary'}`}>
                         {course.code}
                       </span>
@@ -267,9 +267,9 @@ function LearningPathOverview({ onOpenModule }) {
                         </div>
                       )}
                     </div>
-                    <h3 className={`text-xl font-bold flex items-center gap-3 ${course.status === 'locked' ? 'text-slate-400' : 'text-[#111418] dark:text-white'}`}>
-                      {course.title}
-                      <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${course.status === 'locked' ? 'text-slate-400 bg-slate-400/10' : 'text-yellow-500 bg-yellow-500/10'}`}>
+                    <h3 className={`flex flex-col gap-2 text-lg font-bold sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:text-xl ${course.status === 'locked' ? 'text-slate-400' : 'text-[#111418] dark:text-white'}`}>
+                      <span className="min-w-0">{course.title}</span>
+                      <span className={`inline-flex w-fit shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs ${course.status === 'locked' ? 'text-slate-400 bg-slate-400/10' : 'text-yellow-500 bg-yellow-500/10'}`}>
                         <span className="material-symbols-outlined text-[14px]">
                           bolt
                         </span>
@@ -277,9 +277,9 @@ function LearningPathOverview({ onOpenModule }) {
                       </span>
                     </h3>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex flex-col items-start gap-1 sm:items-end sm:text-right">
                     {course.prerequisite && (
-                      <div className="flex items-center gap-1 text-[10px] font-bold italic">
+                      <div className="flex max-w-full items-start gap-1 text-[10px] font-bold italic sm:items-center sm:justify-end">
                         {course.status === 'locked' ? (
                           <span className="material-symbols-outlined text-[14px] text-slate-400">
                             lock
@@ -289,14 +289,14 @@ function LearningPathOverview({ onOpenModule }) {
                             check_circle
                           </span>
                         )}
-                        <span className="text-slate-500">
+                        <span className="min-w-0 break-words text-slate-500">
                           Prerequisite: {course.prerequisite.code} {course.prerequisite.title}
                         </span>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                   <div className="glass p-3 rounded-xl border border-slate-200/30 dark:border-slate-600/30">
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
                       Estimated Time
@@ -341,8 +341,8 @@ function LearningPathOverview({ onOpenModule }) {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
-                  <div className="flex flex-col gap-1 w-1/2">
+                <div className="flex flex-col gap-4 border-t border-gray-100 pt-2 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <div className="flex w-full flex-col gap-1 sm:w-1/2">
                     <div className="flex justify-between text-xs font-bold text-gray-500">
                       <span>Progress</span>
                       <span className={course.status === 'locked' ? 'text-slate-400' : 'text-primary'}>
@@ -356,9 +356,9 @@ function LearningPathOverview({ onOpenModule }) {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:gap-3">
                     <button
-                      className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors border border-slate-200 dark:border-slate-700"
+                      className="min-h-11 min-w-11 touch-manipulation rounded-xl border border-slate-200 bg-slate-100 p-2.5 text-slate-600 transition-colors hover:text-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                       title="View Syllabus"
                       type="button"
                     >
@@ -367,11 +367,11 @@ function LearningPathOverview({ onOpenModule }) {
                       </span>
                     </button>
                     <button
-                      className={`${
+                      className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all touch-manipulation sm:flex-initial sm:px-6 ${
                         course.status === 'locked' 
-                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' 
-                          : 'bg-primary hover:bg-blue-600 text-white shadow-lg shadow-primary/20'
-                      } text-xs font-bold px-6 py-2.5 rounded-xl transition-all flex items-center gap-2`}
+                          ? 'cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-800' 
+                          : 'bg-primary text-white shadow-lg shadow-primary/20 hover:bg-blue-600'
+                      }`}
                       onClick={(event) => {
                         event.stopPropagation()
                         if (course.status !== 'locked') onOpenModule?.(course.id)

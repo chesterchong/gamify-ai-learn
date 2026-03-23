@@ -434,7 +434,7 @@ function Signup() {
         }
       `}</style>
 
-      <main className="container mx-auto px-6 py-16 relative z-10 min-h-[calc(100vh-4rem)] flex items-center justify-center">
+      <main className="relative z-10 mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
         <GravityStarsBackground
           className="pointer-events-none absolute inset-0"
           starsOpacity={0.45}

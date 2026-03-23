@@ -301,7 +301,7 @@ function EditProfile() {
           animation: edit-tier-breathe 4s ease-in-out infinite;
         }
       `}</style>
-        <div className="max-w-5xl mx-auto px-6 md:px-10 py-10">
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10 md:px-10">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
               Edit Profile
@@ -344,7 +344,7 @@ function EditProfile() {
           )}
 
           <form onSubmit={handleSubmit}>
-            <section className="rounded-2xl border border-[#1e2b3f] bg-[#0f1623] shadow-[0_20px_50px_-20px_rgba(15,31,52,0.9)] px-6 md:px-10 py-8 space-y-8">
+            <section className="space-y-8 rounded-2xl border border-[#1e2b3f] bg-[#0f1623] px-4 py-6 shadow-[0_20px_50px_-20px_rgba(15,31,52,0.9)] sm:px-6 sm:py-8 md:px-10">
               <div className="flex flex-col lg:flex-row gap-8">
                 <div className="flex items-center gap-6">
                   <div className="relative">

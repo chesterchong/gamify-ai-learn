@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { clearMeCache, writeMeCache } from '../lib/authMeCache.js'
 import { fetchMe } from '../lib/fetchMe.js'
@@ -211,9 +212,12 @@ function TopNav() {
             </div>
           </div>
         </div>
+      </header>
 
-        {isAuthed && menuOpen && (
-          <div className="fixed inset-0 z-[60] lg:hidden">
+      {isAuthed &&
+        menuOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[200] lg:hidden" role="presentation">
             <button
               type="button"
               className="absolute inset-0 bg-black/70 backdrop-blur-sm touch-manipulation"
@@ -253,9 +257,9 @@ function TopNav() {
                 Log out
               </button>
             </nav>
-          </div>
+          </div>,
+          document.body,
         )}
-      </header>
     </>
   )
 }

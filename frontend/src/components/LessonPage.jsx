@@ -366,7 +366,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 lg:p-10 pb-24">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 pb-24 sm:px-6 lg:p-10">
       <button
         onClick={onBack}
         className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-primary transition-colors mb-4"
@@ -376,9 +376,9 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
         Back to chapter
       </button>
 
-      <div className="flex gap-6">
+      <div className="flex min-w-0 gap-6">
         {/* Sidebar: lessons and problems in this chapter (Terms-style navigation) */}
-        <aside className="hidden md:block w-64 flex-shrink-0">
+        <aside className="hidden w-64 shrink-0 md:block">
           <div className="sticky top-24 glass-panel rounded-xl p-4 border border-slate-700/50">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-4 flex items-center">
               <span className="material-symbols-outlined text-sm mr-2">menu_book</span>
@@ -453,7 +453,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
         </aside>
 
         {/* Main lesson content */}
-        <div className="flex-1 space-y-8">
+        <div className="min-w-0 flex-1 space-y-8">
           <header>
             <p className="text-primary text-xs font-bold uppercase tracking-wide mb-1">
               {module?.course?.code} • {module?.course?.title}
@@ -479,7 +479,7 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
           </header>
 
           <section className="prose prose-slate dark:prose-invert max-w-none">
-            <div className="rounded-xl glass-card border border-slate-200/50 dark:border-slate-700/50 p-6 leading-relaxed text-[#111418] dark:text-slate-300">
+            <div className="rounded-xl glass-card border border-slate-200/50 dark:border-slate-700/50 p-4 leading-relaxed text-[#111418] dark:text-slate-300 sm:p-6">
               {renderContent(content)}
             </div>
           </section>
@@ -571,11 +571,11 @@ function LessonPage({ lessonId, onBack, onComplete, initialModuleData }) {
           )}
 
           {/* Completion footer */}
-          <section className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 text-sm">
+          <section className="flex flex-col gap-3 border-t border-slate-200 pt-4 text-sm dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-xs text-slate-500">
               {hasQuiz && 'Complete the quiz correctly to finish this lesson.'}
             </div>
-            <div>
+            <div className="flex shrink-0 justify-end">
               {isCompleted ? (
                 getNextLessonId() ? (
                   <button

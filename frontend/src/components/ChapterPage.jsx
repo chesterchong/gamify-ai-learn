@@ -101,7 +101,7 @@ function ChapterPage({ moduleId, courseId, courseTitle, onBack, onOpenLesson }) 
       onClick={() => onOpenLesson?.(item.id)}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-lg">
               {item.isCompleted ? 'check_circle' : typeIcon(item.type)}
@@ -123,7 +123,7 @@ function ChapterPage({ moduleId, courseId, courseTitle, onBack, onOpenLesson }) 
   )
 
   return (
-    <div className="max-w-4xl mx-auto p-6 lg:p-12 space-y-10 pb-24">
+    <div className="mx-auto w-full max-w-4xl space-y-10 px-4 py-6 pb-24 sm:px-6 lg:p-12">
       <button
         className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-primary transition-colors"
         onClick={onBack}
@@ -145,8 +145,8 @@ function ChapterPage({ moduleId, courseId, courseTitle, onBack, onOpenLesson }) 
         )}
       </div>
 
-      <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-[#161b2a] border border-slate-200 dark:border-slate-800">
-        <div className="flex-1">
+      <div className="flex flex-wrap items-center gap-3 p-4 sm:gap-4 rounded-2xl bg-white dark:bg-[#161b2a] border border-slate-200 dark:border-slate-800">
+        <div className="min-w-0 flex-1 basis-[12rem]">
           <p className="text-xs font-bold text-slate-500 uppercase mb-1">Progress</p>
           <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
             <div

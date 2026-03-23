@@ -776,7 +776,7 @@ function Quiz() {
       `}</style>
       <div className="quiz-glow-line" aria-hidden="true" />
       <div className="quiz-circuit-bg relative">
-        <div className="max-w-5xl mx-auto w-full p-6 lg:p-12 space-y-10 pb-24 relative z-10">
+        <div className="relative z-10 mx-auto w-full max-w-5xl space-y-10 px-4 py-6 pb-24 sm:px-6 lg:p-12">
           <header className="mb-10">
             <div className="mt-0 flex flex-col gap-3">
               <div className="flex flex-col md:flex-row gap-3 md:items-center">
@@ -812,7 +812,7 @@ function Quiz() {
             </div>
           </header>
 
-          <div className="space-y-6 w-full">
+          <div className="min-w-0 space-y-6 w-full">
             {!authChecked ? (
               <section
                 className="glass-card rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50 min-h-[280px] flex items-center justify-center"
@@ -823,10 +823,11 @@ function Quiz() {
               </section>
             ) : (
             <section
-              className="glass-card rounded-2xl overflow-hidden border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto"
+              className="glass-card rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-x-auto overscroll-x-contain"
               data-purpose="quiz-log"
             >
-              <div className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-3 border-b border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30 text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400">
+              <div className="min-w-[52rem]">
+              <div className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-3 border-b border-slate-200/50 bg-slate-500/5 px-3 py-3 text-xs font-bold tracking-wide text-slate-500 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-400 sm:gap-4 sm:px-6">
                 <div className="w-10 text-left">Id</div>
                 <div className="min-w-0">Code</div>
                 <div className="min-w-0">Course</div>
@@ -834,14 +835,14 @@ function Quiz() {
                 <div className="text-right">Action</div>
               </div>
               {isAdmin && rowActionError && (
-                <div className="px-6 py-2 text-xs text-amber-400 border-b border-slate-200/50 dark:border-slate-700/50 bg-amber-500/5">
+                <div className="border-b border-slate-200/50 bg-amber-500/5 px-3 py-2 text-xs text-amber-400 dark:border-slate-700/50 sm:px-6">
                   {rowActionError}
                 </div>
               )}
               <div className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
                 {isAdmin && (
                   <div
-                    className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center bg-primary/5 border-b border-primary/20"
+                    className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-3 items-center border-b border-primary/20 bg-primary/5 px-3 py-4 sm:gap-4 sm:px-6"
                     data-purpose="admin-new-quiz-row"
                   >
                     <div className="w-10 text-slate-500 dark:text-slate-400 text-xs tabular-nums select-none" title="Assigned when quiz is created">
@@ -947,7 +948,7 @@ function Quiz() {
                     return (
                     <div
                       key={`import-${row.batchId}`}
-                      className={`grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center transition-colors group ${
+                      className={`grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-3 items-center px-3 py-4 transition-colors group sm:gap-4 sm:px-6 ${
                         pendingGeneration
                           ? 'bg-amber-500/[0.09] dark:bg-amber-950/35 hover:bg-amber-500/[0.14] dark:hover:bg-amber-950/45 ring-1 ring-inset ring-amber-500/20'
                           : 'bg-slate-500/5 dark:bg-slate-900/40 hover:bg-cyan-500/5'
@@ -1090,7 +1091,7 @@ function Quiz() {
                     return (
                     <div
                       key={`ai-${row.collectionId}`}
-                      className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-4 px-6 py-4 items-center transition-colors hover:bg-violet-500/5 group bg-slate-500/5 dark:bg-slate-900/40"
+                      className="grid grid-cols-[2.5rem_minmax(0,5rem)_minmax(0,24rem)_minmax(10rem,1fr)_minmax(15rem,auto)] gap-3 items-center bg-slate-500/5 px-3 py-4 transition-colors hover:bg-violet-500/5 group dark:bg-slate-900/40 sm:gap-4 sm:px-6"
                       data-purpose="quiz-ai-collection-row"
                     >
                       <div
@@ -1248,7 +1249,7 @@ function Quiz() {
                 })}
               </div>
               {user && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-3 border-t border-slate-200/50 dark:border-slate-700/50 bg-slate-500/5 dark:bg-slate-900/30">
+                <div className="flex flex-col gap-3 border-t border-slate-200/50 bg-slate-500/5 px-3 py-3 dark:border-slate-700/50 dark:bg-slate-900/30 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                   <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                     Page {quizPage + 1}
                     {tableLoading ? (
@@ -1275,6 +1276,7 @@ function Quiz() {
                   </div>
                 </div>
               )}
+              </div>
             </section>
             )}
 
